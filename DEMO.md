@@ -1,5 +1,19 @@
 # Novus — guía rápida para la demo
 
+## Capturas
+
+| Inicio | Vender |
+|---|---|
+| ![Inicio](docs/screenshots/01-inicio.png) | ![Vender](docs/screenshots/02-vender.png) |
+
+| Inventario | Cuentas por cobrar |
+|---|---|
+| ![Inventario](docs/screenshots/03-inventario.png) | ![Cuentas](docs/screenshots/04-cuentas.png) |
+
+| Nota de entrega (PDF) | Primer arranque |
+|---|---|
+| ![Nota](docs/screenshots/05-nota.png) | ![Onboarding](docs/screenshots/06-onboarding.png) |
+
 ## Instalar en la tablet
 
 1. Copia `dist/Novus-1.0.0-tablet.apk` a la tablet (cable USB, Google Drive o
