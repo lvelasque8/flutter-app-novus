@@ -119,15 +119,39 @@ class AccountRepository {
       }
 
       final account = Account.fromMap(rows.first);
-      final newPaid = (account.paid + amount).clamp(0, account.total);
+      final newPaid =
+          (account.paid + amount).clamp(0, account.total).toDouble();
       final settled = (account.total - newPaid) <= 0.005;
+
+      final rateRows = await txn.query(
+        'settings',
+        columns: ['value'],
+        where: 'key = ?',
+        whereArgs: ['rate_bs'],
+        limit: 1,
+      );
+      final rate = rateRows.isEmpty
+          ? 0.0
+          : double.tryParse(rateRows.first['value'] as String? ?? '') ?? 0.0;
+
+      final sessionRows = await txn.query(
+        'cash_sessions',
+        columns: ['id'],
+        where: "status = 'abierta'",
+        orderBy: 'opened_at DESC',
+        limit: 1,
+      );
+      final cashSessionId =
+          sessionRows.isEmpty ? null : sessionRows.first['id'] as String;
 
       await txn.insert('account_payments', {
         'id': _uuid.v4(),
         'account_id': accountId,
         'amount': amount,
+        'amount_bs': amount * rate,
         'method': method,
         'note': note,
+        'cash_session_id': cashSessionId,
         'created_at': DateTime.now().toIso8601String(),
       });
 

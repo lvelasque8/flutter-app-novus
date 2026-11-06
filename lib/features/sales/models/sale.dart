@@ -52,6 +52,7 @@ class SaleItem {
     required this.price,
     required this.quantity,
     required this.subtotal,
+    this.unitCost = 0,
   });
 
   final String id;
@@ -59,6 +60,7 @@ class SaleItem {
   final String productId;
   final String name;
   final double price;
+  final double unitCost;
   final int quantity;
   final double subtotal;
 
@@ -69,6 +71,7 @@ class SaleItem {
       'product_id': productId,
       'name': name,
       'price': price,
+      'unit_cost': unitCost,
       'quantity': quantity,
       'subtotal': subtotal,
     };
@@ -81,6 +84,7 @@ class SaleItem {
       productId: (map['product_id'] as String?) ?? '',
       name: (map['name'] as String?) ?? '',
       price: ((map['price'] as num?) ?? 0).toDouble(),
+      unitCost: ((map['unit_cost'] as num?) ?? 0).toDouble(),
       quantity: ((map['quantity'] as num?) ?? 0).toInt(),
       subtotal: ((map['subtotal'] as num?) ?? 0).toDouble(),
     );

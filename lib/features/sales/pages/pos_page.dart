@@ -12,6 +12,7 @@ import '../../../shared/widgets/atoms/app_text.dart';
 import '../../../shared/widgets/atoms/app_text_field.dart';
 import '../../accounts/providers/account_providers.dart';
 import '../../accounts/widgets/customer_picker_dialog.dart';
+import '../../cash/providers/cash_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../../documents/receipt_pdf.dart';
 import '../../products/models/product.dart';
@@ -92,6 +93,7 @@ class _POSPageState extends ConsumerState<POSPage> {
                     productId: line.product.id,
                     name: line.product.name,
                     price: line.product.price,
+                    unitCost: line.product.cost,
                     quantity: line.quantity,
                     taxExempt: line.product.taxExempt,
                   ),
@@ -119,6 +121,7 @@ class _POSPageState extends ConsumerState<POSPage> {
       ref.invalidate(receivableTotalProvider);
       ref.invalidate(openAccountsCountProvider);
       ref.invalidate(dashboardProvider);
+      ref.invalidate(cashSummaryProvider);
 
       if (!mounted) return;
       await _showSaleDone(sale, settings);

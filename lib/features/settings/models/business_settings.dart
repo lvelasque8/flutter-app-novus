@@ -7,6 +7,9 @@ class BusinessSettings {
     required this.rateBs,
     required this.ivaRate,
     required this.onboarded,
+    this.rateUpdatedAt,
+    this.rateSource = '',
+    this.lastBackupAt,
   });
 
   final String businessName;
@@ -22,6 +25,14 @@ class BusinessSettings {
 
   final bool onboarded;
 
+  /// Última vez que se actualizó la tasa.
+  final DateTime? rateUpdatedAt;
+
+  /// `bcv`, `api` o `manual`.
+  final String rateSource;
+
+  final DateTime? lastBackupAt;
+
   factory BusinessSettings.initial() {
     return const BusinessSettings(
       businessName: 'Mi negocio',
@@ -34,6 +45,8 @@ class BusinessSettings {
     );
   }
 
+  bool get hasRate => rateBs > 0;
+
   BusinessSettings copyWith({
     String? businessName,
     String? rif,
@@ -42,6 +55,11 @@ class BusinessSettings {
     double? rateBs,
     double? ivaRate,
     bool? onboarded,
+    DateTime? rateUpdatedAt,
+    String? rateSource,
+    DateTime? lastBackupAt,
+    bool clearRateUpdatedAt = false,
+    bool clearLastBackupAt = false,
   }) {
     return BusinessSettings(
       businessName: businessName ?? this.businessName,
@@ -51,6 +69,11 @@ class BusinessSettings {
       rateBs: rateBs ?? this.rateBs,
       ivaRate: ivaRate ?? this.ivaRate,
       onboarded: onboarded ?? this.onboarded,
+      rateUpdatedAt:
+          clearRateUpdatedAt ? null : (rateUpdatedAt ?? this.rateUpdatedAt),
+      rateSource: rateSource ?? this.rateSource,
+      lastBackupAt:
+          clearLastBackupAt ? null : (lastBackupAt ?? this.lastBackupAt),
     );
   }
 }

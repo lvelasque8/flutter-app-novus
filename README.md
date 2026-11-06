@@ -19,6 +19,14 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
 - **Notas de entrega / recibos no fiscales**: PDF imprimible o compartible con
   correlativo, datos del negocio, ítems, totales y leyenda **“Documento no
   fiscal”**.
+- **Cierre de caja**: apertura con fondo, ventas del turno, efectivo esperado
+  en Bs/USD, conteo físico y diferencia.
+- **Reportes por fecha**: ventas, ticket promedio, IVA, utilidad estimada,
+  formas de pago, productos más vendidos y ventas por día.
+- **Respaldo y restauración**: exporta la base por el menú de compartir y
+  restaura un archivo `.db` desde Ajustes.
+- **Tasa BCV automática**: consulta la tasa oficial del día al abrir la app,
+  con la API como respaldo y opción manual si no hay internet.
 - **Inicio**: ventas del día, cuentas por cobrar, stock bajo y últimas ventas.
 - **Ajustes**: datos del negocio, RIF, teléfono, dirección, tasa BCV e IVA.
 
@@ -82,17 +90,19 @@ lib/
 ## Base de datos
 
 Tablas principales: `products`, `inventory_movements`, `sales`, `sale_items`,
-`payments`, `customers`, `accounts`, `account_payments` y `settings`.
+`payments`, `customers`, `accounts`, `account_payments`, `cash_sessions` y
+`settings`.
 
 El stock se calcula/actualiza con movimientos (`entrada`, `venta`, `ajuste`),
-lo que deja trazabilidad y prepara el terreno para sincronización.
+lo que deja trazabilidad y prepara el terreno para sincronización. Las ventas y
+abonos guardan la sesión de caja a la que pertenecen.
 
 ## Próximos pasos
 
-- Respaldo/exportación y restauración de la base.
 - Sincronización opcional (una caja hoy, varias después).
-- Reportes por rango de fechas y utilidad.
 - Lector de código de barras por cámara.
+- PIN/usuarios y roles.
+- Facturación fiscal (SENIAT), fuera del alcance actual.
 - Firma de release y publicación interna.
 
 ---

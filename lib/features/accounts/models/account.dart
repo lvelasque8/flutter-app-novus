@@ -103,11 +103,13 @@ class AccountPayment {
     required this.method,
     required this.note,
     required this.createdAt,
+    this.amountBs = 0,
   });
 
   final String id;
   final String accountId;
   final double amount;
+  final double amountBs;
   final String method;
   final String note;
   final DateTime createdAt;
@@ -117,6 +119,7 @@ class AccountPayment {
       'id': id,
       'account_id': accountId,
       'amount': amount,
+      'amount_bs': amountBs,
       'method': method,
       'note': note,
       'created_at': createdAt.toIso8601String(),
@@ -128,6 +131,7 @@ class AccountPayment {
       id: map['id'] as String,
       accountId: (map['account_id'] as String?) ?? '',
       amount: ((map['amount'] as num?) ?? 0).toDouble(),
+      amountBs: ((map['amount_bs'] as num?) ?? 0).toDouble(),
       method: (map['method'] as String?) ?? '',
       note: (map['note'] as String?) ?? '',
       createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??

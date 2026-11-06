@@ -9,6 +9,7 @@ import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../../shared/widgets/atoms/app_text_field.dart';
+import '../../cash/providers/cash_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../../sales/models/sale.dart';
 import '../../sales/providers/sale_providers.dart';
@@ -285,6 +286,7 @@ class _AccountCard extends ConsumerWidget {
       ref.invalidate(salesProvider);
       ref.invalidate(todayTotalProvider);
       ref.invalidate(todayCountProvider);
+      ref.invalidate(cashSummaryProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Abono registrado')),

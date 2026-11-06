@@ -14,6 +14,14 @@
 |---|---|
 | ![Nota](docs/screenshots/05-nota.png) | ![Onboarding](docs/screenshots/06-onboarding.png) |
 
+| Cierre de caja | Reportes por fecha |
+|---|---|
+| ![Caja](docs/screenshots/07-caja.png) | ![Reportes](docs/screenshots/08-reportes.png) |
+
+| Respaldo | Tasa BCV automática |
+|---|---|
+| ![Respaldo](docs/screenshots/09-respaldo.png) | ![Tasa](docs/screenshots/10-tasa.png) |
+
 ## Instalar en la tablet
 
 1. Copia `dist/Novus-1.0.0-tablet.apk` a la tablet (cable USB, Google Drive o
@@ -47,22 +55,39 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 5. **Cuentas → cliente → Registrar abono**: registra un pago parcial o total.
 6. **Ventas → venta → Imprimir / compartir nota**: genera el PDF con la leyenda
    “DOCUMENTO NO FISCAL”.
+7. **Inicio → Caja**: abre la caja con el fondo inicial, vende y luego ciérrala
+   contando el efectivo en Bs y USD. La diferencia queda en el historial.
+8. **Inicio → Reportes**: cambia entre Hoy, 7 días, Este mes o un rango
+   personalizado. Verás ventas, ticket promedio, IVA, utilidad, formas de pago y
+   productos más vendidos.
+9. **Ajustes → Actualizar BCV**: trae la tasa oficial del día. También se
+   intenta actualizar sola al abrir la app.
+10. **Ajustes → Exportar respaldo**: comparte un archivo `.db` por WhatsApp,
+    Drive o correo. **Restaurar respaldo** recupera ese archivo.
 
 ## Qué funciona
 
 - Inventario con stock, stock mínimo, búsqueda y edición.
 - Ventas con IVA configurable, descuento y doble moneda (USD/Bs).
 - Cuentas por cobrar con abonos y saldo por cliente.
+- Cierre de caja con fondo, efectivo esperado, conteo y diferencia.
+- Reportes por rango de fechas con utilidad estimada.
+- Respaldo y restauración de la base.
+- Tasa BCV automática (BCV oficial, con API de respaldo).
 - Nota de entrega/recibo en PDF para imprimir o compartir.
 - Inicio con ventas del día, cuentas pendientes y stock bajo.
-- Todo funciona sin internet y los datos quedan en la tablet.
+- Todo funciona sin internet; la tasa se actualiza cuando hay conexión.
 
 ## Limitaciones de esta versión
 
 - Está pensada para **una sola caja/tablet**.
-- Todavía no hay exportación/restauración de respaldo.
 - No emite facturación fiscal (SENIAT); solo documentos no fiscales.
 - La app no tiene bloqueo por PIN ni usuarios/roles.
+- La sincronización entre varias cajas queda para una fase posterior.
+- La utilidad de los reportes usa el costo guardado al momento de la venta;
+  las ventas anteriores a esta versión pueden mostrar utilidad incompleta.
+- El APK es universal (~55 MB); se puede dividir por arquitectura para
+  reducir el tamaño.
 
 ## Firma de la aplicación
 

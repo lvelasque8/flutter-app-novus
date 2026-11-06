@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/navigation/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/money.dart';
@@ -11,8 +13,13 @@ import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../../shared/widgets/atoms/app_text_field.dart';
 import '../../accounts/providers/account_providers.dart';
+import '../../backup/data/backup_service.dart';
+import '../../cash/providers/cash_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../../products/providers/product_providers.dart';
+import '../../rates/data/exchange_rate_service.dart';
+import '../../rates/providers/rate_providers.dart';
+import '../../reports/providers/reports_providers.dart';
 import '../../sales/providers/sale_providers.dart';
 import '../data/settings_repository.dart';
 import '../models/business_settings.dart';
@@ -34,6 +41,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _iva = TextEditingController();
   bool _loaded = false;
   bool _saving = false;
+  bool _updatingRate = false;
+  bool _backingUp = false;
+  bool _restoring = false;
 
   @override
   void dispose() {
@@ -96,6 +106,95 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _updateRate() async {
+    setState(() => _updatingRate = true);
+    try {
+      final result = await ExchangeRateService().updateRate();
+      _rate.text = result.rateBs.toStringAsFixed(2);
+      ref.invalidate(settingsProvider);
+      if (mounted) {
+        _show(
+          'Tasa actualizada: ${Money.bs(result.rateBs)} '
+          '(${result.sourceLabel})',
+        );
+      }
+    } catch (error) {
+      if (mounted) _show('No se pudo actualizar la tasa: $error');
+    } finally {
+      if (mounted) setState(() => _updatingRate = false);
+    }
+  }
+
+  Future<void> _exportBackup() async {
+    setState(() => _backingUp = true);
+    try {
+      await BackupService().shareBackup();
+      await SettingsRepository().markBackupDone(DateTime.now());
+      ref.invalidate(settingsProvider);
+      if (mounted) _show('Respaldo generado');
+    } catch (error) {
+      if (mounted) _show('No se pudo generar el respaldo: $error');
+    } finally {
+      if (mounted) setState(() => _backingUp = false);
+    }
+  }
+
+  Future<void> _restoreBackup() async {
+    final file = await BackupService().pickBackupFile();
+    if (file == null || !mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restaurar respaldo'),
+        content: const Text(
+          'Se reemplazarán todos los datos actuales por los del archivo '
+          'seleccionado. Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Restaurar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _restoring = true);
+    try {
+      await BackupService().restore(file);
+      ref.invalidate(settingsProvider);
+      ref.invalidate(productsProvider);
+      ref.invalidate(activeProductsProvider);
+      ref.invalidate(salesProvider);
+      ref.invalidate(accountsProvider);
+      ref.invalidate(customersProvider);
+      ref.invalidate(receivableTotalProvider);
+      ref.invalidate(openAccountsCountProvider);
+      ref.invalidate(todayTotalProvider);
+      ref.invalidate(todayCountProvider);
+      ref.invalidate(dashboardProvider);
+      ref.invalidate(openCashSessionProvider);
+      ref.invalidate(cashSummaryProvider);
+      ref.invalidate(cashHistoryProvider);
+      ref.invalidate(reportsProvider);
+      if (mounted) {
+        _show('Respaldo restaurado');
+        context.go(AppRoutes.home);
+      }
+    } catch (error) {
+      if (mounted) _show('No se pudo restaurar: $error');
+    } finally {
+      if (mounted) setState(() => _restoring = false);
+    }
   }
 
   Future<void> _confirmClear() async {
@@ -233,6 +332,44 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppText(
+                                  value.rateUpdatedAt == null
+                                      ? 'Tasa manual · usa el botón para '
+                                          'traer la tasa del BCV'
+                                      : 'Actualizada '
+                                          '${Money.dateTime(value.rateUpdatedAt!)}'
+                                          ' · ${rateSourceLabel(value.rateSource)}',
+                                  variant: AppTextVariant.caption,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed:
+                                    _updatingRate ? null : _updateRate,
+                                icon: _updatingRate
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.cloud_download_outlined,
+                                        size: 18,
+                                      ),
+                                label: Text(
+                                  _updatingRate
+                                      ? 'Actualizando...'
+                                      : 'Actualizar BCV',
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: AppSpacing.xl),
                           SizedBox(
                             width: double.infinity,
@@ -257,12 +394,37 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             variant: AppTextVariant.titleLarge,
                           ),
                           const SizedBox(height: AppSpacing.sm),
-                          const AppText(
-                            'Novus guarda todo en este dispositivo. '
-                            'En una próxima versión podrás exportar un respaldo '
-                            'para moverlo a otra tablet.',
+                          AppText(
+                            value.lastBackupAt == null
+                                ? 'Novus guarda todo en esta tablet. Genera un '
+                                    'respaldo para moverlo a otro dispositivo '
+                                    'o protegerlo ante una falla.'
+                                : 'Último respaldo: '
+                                    '${Money.dateTime(value.lastBackupAt!)}',
                             variant: AppTextVariant.bodySmall,
                             color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          SizedBox(
+                            width: double.infinity,
+                            child: AppButton(
+                              'Exportar respaldo',
+                              variant: AppButtonVariant.secondary,
+                              icon: Icons.ios_share_outlined,
+                              loading: _backingUp,
+                              onPressed: _backingUp ? null : _exportBackup,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          SizedBox(
+                            width: double.infinity,
+                            child: AppButton(
+                              'Restaurar respaldo',
+                              variant: AppButtonVariant.secondary,
+                              icon: Icons.restore_outlined,
+                              loading: _restoring,
+                              onPressed: _restoring ? null : _restoreBackup,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.lg),
                           SizedBox(

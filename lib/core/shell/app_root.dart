@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../features/settings/pages/onboarding_page.dart';
 import '../../features/settings/providers/settings_providers.dart';
+import '../../features/rates/providers/rate_providers.dart';
 import '../../shared/widgets/atoms/app_button.dart';
 import '../../shared/widgets/atoms/app_text.dart';
 import 'main_shell.dart';
@@ -14,6 +15,8 @@ class AppRoot extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Intenta actualizar la tasa una vez al día sin bloquear la interfaz.
+    ref.watch(rateAutoRefreshProvider);
     final settings = ref.watch(settingsProvider);
 
     return settings.when(

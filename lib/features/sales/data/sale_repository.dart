@@ -11,11 +11,13 @@ class SaleLineInput {
     required this.price,
     required this.quantity,
     required this.taxExempt,
+    this.unitCost = 0,
   });
 
   final String productId;
   final String name;
   final double price;
+  final double unitCost;
   final int quantity;
   final bool taxExempt;
 
@@ -41,6 +43,16 @@ class SaleRepository {
 
     final db = await AppDatabase.instance.database;
     final now = DateTime.now();
+
+    final openSessionRows = await db.query(
+      'cash_sessions',
+      columns: ['id'],
+      where: "status = 'abierta'",
+      orderBy: 'opened_at DESC',
+      limit: 1,
+    );
+    final cashSessionId =
+        openSessionRows.isEmpty ? null : openSessionRows.first['id'] as String;
 
     final subtotal = lines.fold<double>(0, (sum, line) => sum + line.subtotal);
     final taxable = lines
@@ -102,6 +114,7 @@ class SaleRepository {
         'payment_method': paymentMethod,
         'reference': reference,
         'status': status,
+        'cash_session_id': cashSessionId,
         'created_at': now.toIso8601String(),
       });
 
@@ -113,6 +126,7 @@ class SaleRepository {
           'product_id': line.productId,
           'name': line.name,
           'price': line.price,
+          'unit_cost': line.unitCost,
           'quantity': line.quantity,
           'subtotal': line.subtotal,
         });
@@ -123,6 +137,7 @@ class SaleRepository {
             productId: line.productId,
             name: line.name,
             price: line.price,
+            unitCost: line.unitCost,
             quantity: line.quantity,
             subtotal: line.subtotal,
           ),

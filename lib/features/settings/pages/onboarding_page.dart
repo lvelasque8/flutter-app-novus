@@ -9,6 +9,8 @@ import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../../shared/widgets/atoms/app_text_field.dart';
+import '../../rates/data/exchange_rate_service.dart';
+import '../../rates/providers/rate_providers.dart';
 import '../data/settings_repository.dart';
 import '../models/business_settings.dart';
 import '../providers/settings_providers.dart';
@@ -30,6 +32,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   late final TextEditingController _rate;
   late final TextEditingController _iva;
   bool _saving = false;
+  bool _updatingRate = false;
+  String _rateSource = 'manual';
+  DateTime? _rateUpdatedAt;
 
   @override
   void initState() {
@@ -83,6 +88,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           phone: _phone.text.trim(),
           rateBs: rate,
           ivaRate: iva.clamp(0, 100),
+          rateUpdatedAt: _rateUpdatedAt ?? DateTime.now(),
+          rateSource: _rateSource,
           onboarded: true,
         ),
       );
@@ -98,6 +105,31 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Future<void> _fetchRate() async {
+    setState(() => _updatingRate = true);
+    try {
+      final result = await ExchangeRateService().updateRate();
+      _rate.text = result.rateBs.toStringAsFixed(2);
+      _rateSource = result.source;
+      _rateUpdatedAt = DateTime.now();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Tasa ${result.sourceLabel}: ${Money.bs(result.rateBs)}',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        _showError('No se pudo obtener la tasa: $error');
+      }
+    } finally {
+      if (mounted) setState(() => _updatingRate = false);
+    }
   }
 
   @override
@@ -207,6 +239,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                 label: 'Tasa BCV (Bs por USD) *',
                                 hint: 'Ej: 36,50',
                                 controller: _rate,
+                                onChanged: (_) {
+                                  if (_rateSource != 'manual') {
+                                    setState(() => _rateSource = 'manual');
+                                  }
+                                },
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                   decimal: true,
@@ -233,6 +270,43 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                                     RegExp(r'[0-9.,]'),
                                   ),
                                 ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppText(
+                                _rateUpdatedAt == null
+                                    ? 'Puedes escribirla manualmente o traerla '
+                                        'del BCV si tienes internet.'
+                                    : 'Tasa ${rateSourceLabel(_rateSource)} '
+                                        'actualizada hoy.',
+                                variant: AppTextVariant.caption,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed:
+                                  _updatingRate ? null : _fetchRate,
+                              icon: _updatingRate
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.cloud_download_outlined,
+                                      size: 18,
+                                    ),
+                              label: Text(
+                                _updatingRate
+                                    ? 'Consultando...'
+                                    : 'Obtener tasa BCV',
                               ),
                             ),
                           ],

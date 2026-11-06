@@ -50,9 +50,20 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
 
+  # Respaldo y tasa de cambio
+  http: ^1.2.0
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
+  file_picker: ^8.1.7
+
   # Utils
   intl: ^0.20.2
   uuid: ^4.2.1
+
+# path_provider_android 2.3.x compila código nativo JNI que no necesitamos.
+# Esta versión usa canales de plataforma y mantiene el build simple.
+dependency_overrides:
+  path_provider_android: 2.2.20
 
 dev_dependencies:
   flutter_test:

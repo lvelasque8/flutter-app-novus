@@ -10,6 +10,10 @@ import '../../../shared/widgets/atoms/app_badge.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
+import '../../cash/models/cash_session.dart';
+import '../../cash/providers/cash_providers.dart';
+import '../../rates/providers/rate_providers.dart';
+import '../../settings/models/business_settings.dart';
 import '../../settings/providers/settings_providers.dart';
 import '../providers/dashboard_providers.dart';
 
@@ -31,6 +35,7 @@ class DashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(dashboardProvider);
     final settings = ref.watch(settingsProvider);
+    final openCash = ref.watch(openCashSessionProvider);
     final businessName =
         settings.valueOrNull?.businessName ?? 'Mi negocio';
     final rate = settings.valueOrNull?.rateBs ?? 0;
@@ -59,7 +64,9 @@ class DashboardPage extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            _buildHeader(context, businessName, rate),
+            _buildHeader(context, businessName, settings.valueOrNull),
+            const SizedBox(height: AppSpacing.md),
+            _buildCashBanner(context, openCash.valueOrNull),
             const SizedBox(height: AppSpacing.lg),
             LayoutBuilder(
               builder: (context, constraints) {
@@ -152,6 +159,18 @@ class DashboardPage extends ConsumerWidget {
                   icon: Icons.receipt_long_outlined,
                   onPressed: onAccounts,
                 ),
+                AppButton(
+                  'Caja',
+                  variant: AppButtonVariant.secondary,
+                  icon: Icons.point_of_sale_outlined,
+                  onPressed: () => context.push(AppRoutes.cash),
+                ),
+                AppButton(
+                  'Reportes',
+                  variant: AppButtonVariant.secondary,
+                  icon: Icons.bar_chart_outlined,
+                  onPressed: () => context.push(AppRoutes.reports),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -206,9 +225,20 @@ class DashboardPage extends ConsumerWidget {
   Widget _buildHeader(
     BuildContext context,
     String businessName,
-    double rate,
+    BusinessSettings? settings,
   ) {
     final now = DateTime.now();
+    final rate = settings?.rateBs ?? 0;
+    final updated = settings?.rateUpdatedAt;
+
+    final extras = <String>[
+      if (rate > 0 && (settings?.rateSource.isNotEmpty ?? false))
+        rateSourceLabel(settings!.rateSource),
+      if (updated != null) 'actualizada ${Money.date(updated)}',
+    ];
+
+    final rateText = rate > 0 ? 'Tasa ${Money.bs(rate)}' : 'Tasa sin configurar';
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -222,7 +252,8 @@ class DashboardPage extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               AppText(
-                'Hoy es ${Money.date(now)} · Tasa ${rate > 0 ? Money.bs(rate) : 'sin configurar'}',
+                'Hoy es ${Money.date(now)} · $rateText'
+                '${extras.isEmpty ? '' : ' · ${extras.join(' · ')}'}',
                 variant: AppTextVariant.bodyMedium,
                 color: AppColors.textSecondary,
               ),
@@ -230,6 +261,59 @@ class DashboardPage extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCashBanner(BuildContext context, CashSession? session) {
+    final isOpen = session != null;
+    final background =
+        isOpen ? AppColors.successContainer : AppColors.warningContainer;
+    final foreground =
+        isOpen ? AppColors.onSuccessContainer : AppColors.onWarningContainer;
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.cash),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isOpen ? Icons.lock_open_outlined : Icons.lock_outline,
+                color: foreground,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      isOpen ? 'Caja abierta' : 'Caja cerrada',
+                      variant: AppTextVariant.titleSmall,
+                      color: foreground,
+                    ),
+                    AppText(
+                      isOpen
+                          ? 'Desde ${Money.dateTime(session.openedAt)} · '
+                              'toca para cerrar el turno'
+                          : 'Abre la caja para iniciar el turno',
+                      variant: AppTextVariant.caption,
+                      color: foreground,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: foreground),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
