@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  static const Color primary = Color(0xFF2563EB);
-  static const Color primaryDark = Color(0xFF1D4ED8);
-  static const Color primaryLight = Color(0xFF3B82F6);
-  static const Color primaryContainer = Color(0xFFDBEAFE);
+  static const Color primary = Color(0xFF4F46E5);
+  static const Color primaryDark = Color(0xFF4338CA);
+  static const Color primaryLight = Color(0xFF6366F1);
+  static const Color primaryContainer = Color(0xFFE0E7FF);
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color onPrimaryContainer = Color(0xFF1E3A8A);
+  static const Color onPrimaryContainer = Color(0xFF312E81);
 
   static const Color secondary = Color(0xFF10B981);
   static const Color secondaryDark = Color(0xFF059669);
@@ -118,8 +118,6 @@ class AppColors {
         surface: surface,
         onSurface: onSurface,
         surfaceContainer: surfaceContainer,
-        background: background,
-        onBackground: onBackground,
         outline: outline,
         outlineVariant: outlineVariant,
         shadow: shadow,
@@ -146,8 +144,6 @@ class AppColors {
         surface: surfaceDark,
         onSurface: white,
         surfaceContainer: surfaceContainer,
-        background: backgroundDark,
-        onBackground: white,
         outline: outline,
         outlineVariant: outlineVariant,
         shadow: shadowDark,

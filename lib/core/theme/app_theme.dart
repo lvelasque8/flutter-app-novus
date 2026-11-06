@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
@@ -53,7 +52,7 @@ class AppTheme {
   }
 
   static TextTheme _buildTextTheme() {
-    return GoogleFonts.interTextTheme().copyWith(
+    return const TextTheme().copyWith(
       displayLarge: AppTextStyles.displayLarge,
       displayMedium: AppTextStyles.displayMedium,
       displaySmall: AppTextStyles.displaySmall,
@@ -73,10 +72,12 @@ class AppTheme {
   }
 
   static AppBarTheme _buildAppBarTheme() {
-    return const AppBarTheme(
+    return AppBarTheme(
       elevation: 0,
       centerTitle: true,
-      titleTextStyle: AppTextStyles.titleLarge,
+      titleTextStyle: AppTextStyles.titleLarge.copyWith(
+        color: AppColors.textPrimary,
+      ),
       backgroundColor: AppColors.surface,
       foregroundColor: AppColors.onSurface,
       surfaceTintColor: AppColors.transparent,
@@ -170,8 +171,12 @@ class AppTheme {
       backgroundColor: AppColors.surfaceContainer,
       selectedColor: AppColors.primaryContainer,
       disabledColor: AppColors.surfaceContainerHigh,
-      labelStyle: AppTextStyles.labelMedium,
-      secondaryLabelStyle: AppTextStyles.labelMedium,
+      labelStyle: AppTextStyles.labelMedium.copyWith(
+        color: AppColors.textPrimary,
+      ),
+      secondaryLabelStyle: AppTextStyles.labelMedium.copyWith(
+        color: AppColors.primary,
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -226,8 +231,12 @@ class AppTheme {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      titleTextStyle: AppTextStyles.headlineSmall,
-      contentTextStyle: AppTextStyles.bodyMedium,
+      titleTextStyle: AppTextStyles.headlineSmall.copyWith(
+        color: AppColors.textPrimary,
+      ),
+      contentTextStyle: AppTextStyles.bodyMedium.copyWith(
+        color: AppColors.textPrimary,
+      ),
     );
   }
 

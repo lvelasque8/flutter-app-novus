@@ -46,7 +46,6 @@ class AppTextButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final buttonStyle = _getButtonStyle();
     final buttonHeight = _getButtonHeight();
-    final buttonPadding = _getButtonPadding();
 
     Widget child = _buildButtonContent();
 

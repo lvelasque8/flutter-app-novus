@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Novus
+android/local.properties
+android/build/
+android/app/build/
+android/.gradle/
+*.db
+*.sqlite
+*.sqlite3
+.vscode/
+dist/

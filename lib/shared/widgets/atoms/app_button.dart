@@ -37,7 +37,6 @@ class AppButton extends StatelessWidget {
     final theme = Theme.of(context);
     final buttonStyle = _getButtonStyle(theme);
     final buttonHeight = _getButtonHeight();
-    final buttonPadding = _getButtonPadding();
 
     Widget child = _buildButtonContent();
 
