@@ -73,18 +73,25 @@ class CashRepository {
     final discount = (row['discount'] as num?)?.toDouble() ?? 0;
 
     final salesByMethod = <String, double>{};
-    final salesRows = await db.rawQuery(
+    final salesBsByMethod = <String, double>{};
+    final paymentRows = await db.rawQuery(
       '''
-      SELECT payment_method, COALESCE(SUM(total), 0) AS total
-      FROM sales
-      WHERE cash_session_id = ?
-      GROUP BY payment_method
+      SELECT p.method,
+             COALESCE(SUM(p.amount), 0) AS total,
+             COALESCE(SUM(p.amount_bs), 0) AS total_bs
+      FROM payments p
+      INNER JOIN sales s ON s.id = p.sale_id
+      WHERE s.cash_session_id = ?
+      GROUP BY p.method
       ''',
       [session.id],
     );
-    for (final methodRow in salesRows) {
-      salesByMethod[methodRow['payment_method'] as String] =
+    for (final methodRow in paymentRows) {
+      final method = methodRow['method'] as String;
+      salesByMethod[method] =
           ((methodRow['total'] as num?) ?? 0).toDouble();
+      salesBsByMethod[method] =
+          ((methodRow['total_bs'] as num?) ?? 0).toDouble();
     }
 
     final abonosByMethod = <String, double>{};
@@ -102,17 +109,7 @@ class CashRepository {
           ((methodRow['total'] as num?) ?? 0).toDouble();
     }
 
-    final cashSalesBsResult = await db.rawQuery(
-      '''
-      SELECT COALESCE(SUM(total_bs), 0) AS total
-      FROM sales
-      WHERE cash_session_id = ? AND payment_method = ?
-      ''',
-      [session.id, PaymentMethods.efectivoBs],
-    );
-    final cashSalesBs =
-        ((cashSalesBsResult.first['total'] as num?) ?? 0).toDouble();
-
+    final cashSalesBs = salesBsByMethod[PaymentMethods.efectivoBs] ?? 0;
     final cashSalesUsd = salesByMethod[PaymentMethods.efectivoUsd] ?? 0;
 
     final cashAbonosBsResult = await db.rawQuery(

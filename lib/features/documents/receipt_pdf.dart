@@ -140,8 +140,18 @@ Future<void> printSaleReceipt({
         ],
         pw.SizedBox(height: 6),
         _row('Forma de pago', paymentLabel(sale.paymentMethod)),
-        if (sale.reference != null && sale.reference!.isNotEmpty)
-          _row('Referencia', sale.reference!),
+        if (sale.payments.isEmpty) ...[
+          if (sale.reference != null && sale.reference!.isNotEmpty)
+            _row('Referencia', sale.reference!),
+        ] else ...[
+          ...sale.payments.map(
+            (payment) => _row(
+              paymentLabel(payment.method),
+              '${_usd(payment.amount)}'
+                  '${payment.reference != null && payment.reference!.isNotEmpty ? ' · ${payment.reference}' : ''}',
+            ),
+          ),
+        ],
         pw.SizedBox(height: 10),
         pw.Divider(),
         pw.Center(
@@ -183,6 +193,8 @@ String paymentLabel(String method) {
       return 'Punto de venta';
     case 'fiado':
       return 'Fiado (cuenta por cobrar)';
+    case 'mixto':
+      return 'Pago mixto';
     default:
       return method;
   }

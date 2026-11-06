@@ -101,16 +101,37 @@ class SaleDetailPage extends ConsumerWidget {
                           label: 'Cliente',
                           value: sale.customerName ?? 'Consumidor final',
                         ),
-                        _InfoRow(
-                          label: 'Forma de pago',
-                          value: PaymentMethods.label(sale.paymentMethod),
-                        ),
-                        if (sale.reference != null &&
-                            sale.reference!.isNotEmpty)
+                        if (sale.payments.isEmpty) ...[
                           _InfoRow(
-                            label: 'Referencia',
-                            value: sale.reference!,
+                            label: 'Forma de pago',
+                            value: PaymentMethods.label(sale.paymentMethod),
                           ),
+                          if (sale.reference != null &&
+                              sale.reference!.isNotEmpty)
+                            _InfoRow(
+                              label: 'Referencia',
+                              value: sale.reference!,
+                            ),
+                        ] else ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          const AppText(
+                            'Formas de pago',
+                            variant: AppTextVariant.labelMedium,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          ...sale.payments.map(
+                            (payment) => _InfoRow(
+                              label: PaymentMethods.label(payment.method),
+                              value: [
+                                Money.usd(payment.amount),
+                                if (payment.reference != null &&
+                                    payment.reference!.isNotEmpty)
+                                  'Ref. ${payment.reference}',
+                              ].join(' · '),
+                            ),
+                          ),
+                        ],
                         _InfoRow(
                           label: 'Tasa BCV',
                           value: sale.rate > 0

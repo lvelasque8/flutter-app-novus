@@ -22,6 +22,10 @@
 |---|---|
 | ![Respaldo](docs/screenshots/09-respaldo.png) | ![Tasa](docs/screenshots/10-tasa.png) |
 
+| Pago combinado | Detalle de la venta |
+|---|---|
+| ![Pago mixto](docs/screenshots/11-pago-mixto.png) | ![Detalle mixto](docs/screenshots/12-detalle-mixto.png) |
+
 ## Instalar en la tablet
 
 1. Copia `dist/Novus-1.0.0-tablet.apk` a la tablet (cable USB, Google Drive o
@@ -49,9 +53,11 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 1. **Inventario → Cargar productos de ejemplo**: carga 8 productos típicos.
 2. **Vender**: toca productos para agregarlos al carrito. En horizontal verás
    el catálogo a la izquierda y el carrito a la derecha.
-3. **Cobrar**: elige Efectivo Bs, Efectivo USD, Pago Móvil, Transferencia,
-   Punto de venta o Fiado.
-4. Si eliges **Fiado**, crea un cliente. La venta queda en **Cuentas**.
+3. **Cobrar**: elige un método o pulsa **Agregar método** para combinar
+   efectivo, Pago Móvil, transferencia, punto de venta y fiado. Si falta cubrir
+   el total, pulsa **Dejar resto fiado** y selecciona el cliente.
+4. Si usas **Fiado** (total o parcial), crea/selecciona un cliente. La parte
+   fiada queda en **Cuentas**.
 5. **Cuentas → cliente → Registrar abono**: registra un pago parcial o total.
 6. **Ventas → venta → Imprimir / compartir nota**: genera el PDF con la leyenda
    “DOCUMENTO NO FISCAL”.

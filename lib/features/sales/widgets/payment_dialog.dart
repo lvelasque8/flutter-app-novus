@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -11,15 +12,25 @@ import '../../accounts/models/account.dart';
 import '../../accounts/widgets/customer_picker_dialog.dart';
 import '../models/sale.dart';
 
-class PaymentSelection {
-  const PaymentSelection({
+class PaymentLine {
+  const PaymentLine({
     required this.method,
+    required this.amount,
     required this.reference,
-    required this.customer,
   });
 
   final String method;
+  final double amount;
   final String reference;
+}
+
+class PaymentSelection {
+  const PaymentSelection({
+    required this.lines,
+    required this.customer,
+  });
+
+  final List<PaymentLine> lines;
   final Customer? customer;
 }
 
@@ -56,23 +67,97 @@ class _PaymentDialog extends ConsumerStatefulWidget {
 }
 
 class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
-  late String _method;
+  late final List<_PaymentLineState> _lines;
   late Customer? _customer;
-  final _reference = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _method = widget.rate > 0
+    _customer = widget.initialCustomer;
+    final method = widget.rate > 0
         ? PaymentMethods.efectivoBs
         : PaymentMethods.efectivoUsd;
-    _customer = widget.initialCustomer;
+    _lines = [
+      _PaymentLineState(
+        method: method,
+        amount: widget.total.toStringAsFixed(2),
+      ),
+    ];
   }
 
   @override
   void dispose() {
-    _reference.dispose();
+    for (final line in _lines) {
+      line.dispose();
+    }
     super.dispose();
+  }
+
+  double get _assigned {
+    return _lines.fold<double>(
+      0,
+      (sum, line) => sum + Money.parse(line.amount.text),
+    );
+  }
+
+  double get _remaining => widget.total - _assigned;
+  bool get _balanced => _remaining.abs() <= 0.009;
+  bool get _hasCredit =>
+      _lines.any((line) => PaymentMethods.isCredit(line.method));
+
+  void _addLine() {
+    final method = widget.rate > 0
+        ? PaymentMethods.efectivoBs
+        : PaymentMethods.efectivoUsd;
+    final remaining = _remaining > 0 ? _remaining : 0.0;
+    setState(() {
+      _lines.add(
+        _PaymentLineState(
+          method: method,
+          amount: remaining > 0 ? remaining.toStringAsFixed(2) : '',
+        ),
+      );
+    });
+  }
+
+  void _addCreditRemaining() {
+    if (_remaining <= 0) return;
+    setState(() {
+      _lines.add(
+        _PaymentLineState(
+          method: PaymentMethods.fiado,
+          amount: _remaining.toStringAsFixed(2),
+        ),
+      );
+    });
+  }
+
+  void _removeLine(int index) {
+    if (_lines.length == 1) return;
+    setState(() {
+      _lines.removeAt(index).dispose();
+    });
+  }
+
+  void _confirm() {
+    if (!_balanced) return;
+    if (_hasCredit && _customer == null) return;
+
+    final lines = _lines
+        .map(
+          (line) => PaymentLine(
+            method: line.method,
+            amount: Money.parse(line.amount.text),
+            reference: line.reference.text.trim(),
+          ),
+        )
+        .where((line) => line.amount > 0)
+        .toList();
+
+    Navigator.pop(
+      context,
+      PaymentSelection(lines: lines, customer: _customer),
+    );
   }
 
   IconData _iconFor(String method) {
@@ -93,156 +178,161 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
     }
   }
 
-  void _confirm() {
-    if (PaymentMethods.isCredit(_method) && _customer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Selecciona el cliente para registrar el fiado'),
-        ),
-      );
-      return;
-    }
-
-    Navigator.pop(
-      context,
-      PaymentSelection(
-        method: _method,
-        reference: _reference.text.trim(),
-        customer: _customer,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final canConfirm = _balanced && (!_hasCredit || _customer != null);
+
     return AlertDialog(
       scrollable: true,
       title: const Text('Cobrar venta'),
       content: SizedBox(
-        width: 520,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const AppText(
-                      'Total a cobrar',
-                      variant: AppTextVariant.labelMedium,
-                      color: AppColors.onPrimaryContainer,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
+        width: 580,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppText(
+                    'Total a cobrar',
+                    variant: AppTextVariant.labelMedium,
+                    color: AppColors.onPrimaryContainer,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  AppText(
+                    Money.usd(widget.total),
+                    variant: AppTextVariant.headlineSmall,
+                    color: AppColors.onPrimaryContainer,
+                  ),
+                  if (widget.rate > 0)
                     AppText(
-                      Money.usd(widget.total),
-                      variant: AppTextVariant.headlineSmall,
+                      Money.bs(widget.total * widget.rate),
+                      variant: AppTextVariant.titleMedium,
                       color: AppColors.onPrimaryContainer,
                     ),
-                    if (widget.rate > 0)
-                      AppText(
-                        Money.bs(widget.total * widget.rate),
-                        variant: AppTextVariant.titleMedium,
-                        color: AppColors.onPrimaryContainer,
-                      ),
-                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                const Expanded(
+                  child: AppText(
+                    'Pagos',
+                    variant: AppTextVariant.titleMedium,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _addLine,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Agregar método'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ...List.generate(_lines.length, (index) {
+              return _buildLine(index);
+            }),
+            if (_remaining > 0.009) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppText(
+                      'Falta por asignar: ${Money.usd(_remaining)}',
+                      variant: AppTextVariant.bodySmall,
+                      color: AppColors.warning,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _addCreditRemaining,
+                    child: const Text('Dejar resto fiado'),
+                  ),
+                ],
+              ),
+            ],
+            if (_remaining < -0.009)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: AppText(
+                  'Los pagos exceden el total en ${Money.usd(-_remaining)}',
+                  variant: AppTextVariant.bodySmall,
+                  color: AppColors.error,
                 ),
               ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: AppText(
+                    'Asignado: ${Money.usd(_assigned)}',
+                    variant: AppTextVariant.bodySmall,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                AppText(
+                  _balanced
+                      ? 'Completo'
+                      : (_remaining > 0 ? 'Falta ${Money.usd(_remaining)}' : 'Excede'),
+                  variant: AppTextVariant.bodySmall,
+                  color: _balanced ? AppColors.success : AppColors.warning,
+                ),
+              ],
+            ),
+            if (_hasCredit) ...[
               const SizedBox(height: AppSpacing.lg),
               const AppText(
-                'Forma de pago',
+                'Cliente del fiado',
                 variant: AppTextVariant.titleMedium,
               ),
               const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: PaymentMethods.all.map((method) {
-                  final selected = _method == method;
-                  return ChoiceChip(
-                    selected: selected,
-                    onSelected: (_) => setState(() => _method = method),
-                    avatar: Icon(
-                      _iconFor(method),
-                      size: 18,
-                      color: selected
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? AppColors.primary
-                          : AppColors.textPrimary,
-                      fontWeight:
-                          selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                    label: Text(PaymentMethods.label(method)),
-                  );
-                }).toList(),
-              ),
-              if (PaymentMethods.isCredit(_method)) ...[
-                const SizedBox(height: AppSpacing.lg),
-                const AppText(
-                  'Cliente del fiado',
-                  variant: AppTextVariant.titleMedium,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                InkWell(
-                  onTap: () async {
-                    final selected = await showCustomerPicker(context);
-                    if (selected != null) {
-                      setState(() => _customer = selected);
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                  child: Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.outline),
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.person_outline,
-                          color: AppColors.primary,
+              InkWell(
+                onTap: () async {
+                  final selected = await showCustomerPicker(context);
+                  if (selected != null) {
+                    setState(() => _customer = selected);
+                  }
+                },
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.outline),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: AppText(
+                          _customer?.name ?? 'Seleccionar cliente',
+                          variant: AppTextVariant.bodyMedium,
+                          color: _customer == null
+                              ? AppColors.textHint
+                              : AppColors.textPrimary,
                         ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: AppText(
-                            _customer?.name ?? 'Seleccionar cliente',
-                            variant: AppTextVariant.bodyMedium,
-                            color: _customer == null
-                                ? AppColors.textHint
-                                : AppColors.textPrimary,
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right,
-                          color: AppColors.textHint,
-                        ),
-                      ],
-                    ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppColors.textHint,
+                      ),
+                    ],
                   ),
                 ),
-              ],
-              if (PaymentMethods.requiresReference(_method)) ...[
-                const SizedBox(height: AppSpacing.lg),
-                AppTextField(
-                  label: 'Referencia (opcional)',
-                  hint: 'Número de referencia o teléfono',
-                  controller: _reference,
-                  keyboardType: TextInputType.number,
-                ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
       actions: [
@@ -253,9 +343,103 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
         AppButton(
           'Cobrar ${Money.usd(widget.total)}',
           icon: Icons.check_circle_outline,
-          onPressed: _confirm,
+          enabled: canConfirm,
+          onPressed: canConfirm ? _confirm : null,
         ),
       ],
     );
+  }
+
+  Widget _buildLine(int index) {
+    final line = _lines[index];
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.outlineVariant),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                _iconFor(line.method),
+                size: 20,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: line.method,
+                    items: PaymentMethods.all
+                        .map(
+                          (method) => DropdownMenuItem(
+                            value: method,
+                            child: Text(PaymentMethods.label(method)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        line.method = value;
+                        if (line.method == PaymentMethods.fiado &&
+                            _customer == null) {
+                          // El cliente se elige más abajo.
+                        }
+                      });
+                    },
+                  ),
+                ),
+              ),
+              if (_lines.length > 1)
+                IconButton(
+                  tooltip: 'Quitar pago',
+                  onPressed: () => _removeLine(index),
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
+            label: 'Monto (USD)',
+            hint: '0,00',
+            controller: line.amount,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+            ],
+            onChanged: (_) => setState(() {}),
+          ),
+          if (PaymentMethods.requiresReference(line.method)) ...[
+            const SizedBox(height: AppSpacing.sm),
+            AppTextField(
+              label: 'Referencia (opcional)',
+              hint: 'Número de referencia',
+              controller: line.reference,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentLineState {
+  _PaymentLineState({required this.method, required String amount})
+      : amount = TextEditingController(text: amount),
+        reference = TextEditingController();
+
+  String method;
+  final TextEditingController amount;
+  final TextEditingController reference;
+
+  void dispose() {
+    amount.dispose();
+    reference.dispose();
   }
 }

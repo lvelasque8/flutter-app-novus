@@ -99,12 +99,19 @@ class _POSPageState extends ConsumerState<POSPage> {
                   ),
                 )
                 .toList(),
+            payments: selection.lines
+                .map(
+                  (line) => PaymentInput(
+                    method: line.method,
+                    amount: line.amount,
+                    reference:
+                        line.reference.isEmpty ? null : line.reference,
+                  ),
+                )
+                .toList(),
             discount: cart.discount,
             ivaRate: settings.ivaRate,
             rateBs: settings.rateBs,
-            paymentMethod: selection.method,
-            reference:
-                selection.reference.isEmpty ? null : selection.reference,
             customerId: selection.customer?.id ?? cart.customer?.id,
             customerName:
                 selection.customer?.name ?? cart.customer?.name,
@@ -149,10 +156,25 @@ class _POSPageState extends ConsumerState<POSPage> {
             ),
             if (sale.rate > 0)
               Text('Equivalente: ${Money.bs(sale.totalBs)}'),
+            if (sale.payments.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Pagos:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              ...sale.payments.map(
+                (payment) => Text(
+                  '${PaymentMethods.label(payment.method)}: '
+                  '${Money.usd(payment.amount)}',
+                ),
+              ),
+            ],
             if (sale.isCredit) ...[
               const SizedBox(height: 8),
               Text(
-                'Fiado a ${sale.customerName ?? 'cliente'}. '
+                'Fiado a ${sale.customerName ?? 'cliente'}: '
+                '${Money.usd(sale.payments.where((p) => PaymentMethods.isCredit(p.method)).fold<double>(0, (sum, p) => sum + p.amount))}. '
                 'Quedó registrado en cuentas por cobrar.',
               ),
             ],

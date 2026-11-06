@@ -12,6 +12,9 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
   control de stock y alertas de stock bajo.
 - **Ventas**: catálogo táctil, carrito, descuentos, IVA configurable y cobro en
   efectivo (Bs/USD), Pago Móvil, transferencia, punto de venta o fiado.
+- **Pagos combinados**: reparte el total entre varios métodos y deja el resto
+  como fiado. Ejemplo: $1,00 en efectivo + $2,48 por Pago Móvil, o efectivo +
+  fiado parcial.
 - **Doble moneda**: precios en dólares y equivalente en bolívares con la tasa
   BCV configurada.
 - **Cuentas por cobrar**: fiados por cliente, saldo, historial de abonos y

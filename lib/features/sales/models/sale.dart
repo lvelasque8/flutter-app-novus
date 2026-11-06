@@ -7,6 +7,7 @@ class PaymentMethods {
   static const String transferencia = 'transferencia';
   static const String puntoVenta = 'punto_venta';
   static const String fiado = 'fiado';
+  static const String mixto = 'mixto';
 
   static const List<String> all = [
     efectivoBs,
@@ -31,6 +32,8 @@ class PaymentMethods {
         return 'Punto de venta';
       case fiado:
         return 'Fiado';
+      case mixto:
+        return 'Pago mixto';
       default:
         return method;
     }
@@ -108,6 +111,7 @@ class Sale {
     required this.status,
     required this.createdAt,
     this.items = const [],
+    this.payments = const [],
   });
 
   final String id;
@@ -127,10 +131,11 @@ class Sale {
   final String status;
   final DateTime createdAt;
   final List<SaleItem> items;
+  final List<SalePayment> payments;
 
   bool get isCredit => status == 'pendiente';
 
-  Sale copyWith({List<SaleItem>? items}) {
+  Sale copyWith({List<SaleItem>? items, List<SalePayment>? payments}) {
     return Sale(
       id: id,
       number: number,
@@ -147,6 +152,7 @@ class Sale {
       status: status,
       createdAt: createdAt,
       items: items ?? this.items,
+      payments: payments ?? this.payments,
     );
   }
 
@@ -169,7 +175,11 @@ class Sale {
     };
   }
 
-  factory Sale.fromMap(Map<String, Object?> map, {List<SaleItem>? items}) {
+  factory Sale.fromMap(
+    Map<String, Object?> map, {
+    List<SaleItem>? items,
+    List<SalePayment>? payments,
+  }) {
     return Sale(
       id: map['id'] as String,
       number: (map['number'] as String?) ?? '',
@@ -187,6 +197,40 @@ class Sale {
       createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??
           DateTime.now(),
       items: items ?? const [],
+      payments: payments ?? const [],
+    );
+  }
+}
+
+class SalePayment {
+  const SalePayment({
+    required this.id,
+    required this.saleId,
+    required this.method,
+    required this.amount,
+    required this.amountBs,
+    required this.createdAt,
+    this.reference,
+  });
+
+  final String id;
+  final String saleId;
+  final String method;
+  final double amount;
+  final double amountBs;
+  final String? reference;
+  final DateTime createdAt;
+
+  factory SalePayment.fromMap(Map<String, Object?> map) {
+    return SalePayment(
+      id: map['id'] as String,
+      saleId: (map['sale_id'] as String?) ?? '',
+      method: (map['method'] as String?) ?? '',
+      amount: ((map['amount'] as num?) ?? 0).toDouble(),
+      amountBs: ((map['amount_bs'] as num?) ?? 0).toDouble(),
+      reference: map['reference'] as String?,
+      createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??
+          DateTime.now(),
     );
   }
 }

@@ -10,7 +10,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int _version = 2;
+  static const int _version = 3;
 
   Database? _db;
   String? _path;
@@ -250,6 +250,26 @@ class AppDatabase {
         {'key': 'last_backup_at', 'value': ''},
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
+    }
+
+    if (oldVersion < 3) {
+      // Completar los pagos de ventas antiguas (anteriores al pago mixto).
+      await db.execute('''
+        INSERT INTO payments (
+          id, sale_id, method, amount, amount_bs, reference, created_at
+        )
+        SELECT 'backfill-' || s.id,
+               s.id,
+               s.payment_method,
+               s.total,
+               s.total_bs,
+               s.reference,
+               s.created_at
+        FROM sales s
+        WHERE NOT EXISTS (
+          SELECT 1 FROM payments p WHERE p.sale_id = s.id
+        )
+      ''');
     }
   }
 

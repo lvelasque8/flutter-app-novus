@@ -43,12 +43,13 @@ class ReportsRepository {
 
     final methodRows = await db.rawQuery(
       '''
-      SELECT payment_method,
-             COALESCE(SUM(total), 0) AS total,
-             COUNT(*) AS count
-      FROM sales
-      WHERE created_at >= ? AND created_at < ?
-      GROUP BY payment_method
+      SELECT p.method,
+             COALESCE(SUM(p.amount), 0) AS total,
+             COUNT(DISTINCT p.sale_id) AS count
+      FROM payments p
+      INNER JOIN sales s ON s.id = p.sale_id
+      WHERE s.created_at >= ? AND s.created_at < ?
+      GROUP BY p.method
       ORDER BY total DESC
       ''',
       [start, end],
@@ -97,7 +98,7 @@ class ReportsRepository {
       byMethod: methodRows
           .map(
             (row) => ReportMethodTotal(
-              method: (row['payment_method'] as String?) ?? '',
+              method: (row['method'] as String?) ?? '',
               totalUsd: ((row['total'] as num?) ?? 0).toDouble(),
               count: ((row['count'] as num?) ?? 0).toInt(),
             ),

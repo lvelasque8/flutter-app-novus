@@ -24,21 +24,38 @@ class SaleLineInput {
   double get subtotal => price * quantity;
 }
 
+class PaymentInput {
+  const PaymentInput({
+    required this.method,
+    required this.amount,
+    this.reference,
+  });
+
+  final String method;
+  final double amount;
+  final String? reference;
+}
+
 class SaleRepository {
   static const _uuid = Uuid();
 
   Future<Sale> createSale({
     required List<SaleLineInput> lines,
+    required List<PaymentInput> payments,
     required double discount,
     required double ivaRate,
     required double rateBs,
-    required String paymentMethod,
-    String? reference,
     String? customerId,
     String? customerName,
   }) async {
     if (lines.isEmpty) {
       throw Exception('La venta no tiene productos');
+    }
+    if (payments.isEmpty) {
+      throw Exception('La venta no tiene pagos');
+    }
+    if (payments.any((payment) => payment.amount <= 0)) {
+      throw Exception('Cada pago debe ser mayor que cero');
     }
 
     final db = await AppDatabase.instance.database;
@@ -59,19 +76,38 @@ class SaleRepository {
         .where((line) => !line.taxExempt)
         .fold<double>(0, (sum, line) => sum + line.subtotal);
     final tax = taxable * (ivaRate / 100);
-    final total = (subtotal - discount + tax).clamp(0, double.infinity).toDouble();
+    final total =
+        (subtotal - discount + tax).clamp(0, double.infinity).toDouble();
     final totalBs = total * rateBs;
-    final status = PaymentMethods.isCredit(paymentMethod)
-        ? 'pendiente'
-        : 'pagada';
 
-    if (PaymentMethods.isCredit(paymentMethod) &&
-        (customerId == null || customerName == null)) {
+    final paid = payments.fold<double>(
+      0,
+      (sum, payment) => sum + payment.amount,
+    );
+    if ((paid - total).abs() > 0.009) {
+      throw Exception(
+        'Los pagos suman ${paid.toStringAsFixed(2)} y el total es '
+        '${total.toStringAsFixed(2)}',
+      );
+    }
+
+    final credit = payments
+        .where((payment) => PaymentMethods.isCredit(payment.method))
+        .fold<double>(0, (sum, payment) => sum + payment.amount);
+    final status = credit > 0 ? 'pendiente' : 'pagada';
+
+    if (credit > 0 && (customerId == null || customerName == null)) {
       throw Exception('El fiado necesita un cliente');
     }
 
+    final paymentMethod =
+        payments.length == 1 ? payments.first.method : PaymentMethods.mixto;
+    final reference =
+        payments.length == 1 ? payments.first.reference : null;
+
     late Sale sale;
     final createdItems = <SaleItem>[];
+    final createdPayments = <SalePayment>[];
 
     await db.transaction((txn) async {
       for (final line in lines) {
@@ -158,22 +194,37 @@ class SaleRepository {
         });
       }
 
-      if (!PaymentMethods.isCredit(paymentMethod)) {
+      for (final payment in payments) {
+        final paymentId = _uuid.v4();
+        final amountBs = payment.amount * rateBs;
         await txn.insert('payments', {
-          'id': _uuid.v4(),
+          'id': paymentId,
           'sale_id': saleId,
-          'method': paymentMethod,
-          'amount': total,
-          'amount_bs': totalBs,
-          'reference': reference,
+          'method': payment.method,
+          'amount': payment.amount,
+          'amount_bs': amountBs,
+          'reference': payment.reference,
           'created_at': now.toIso8601String(),
         });
-      } else {
+        createdPayments.add(
+          SalePayment(
+            id: paymentId,
+            saleId: saleId,
+            method: payment.method,
+            amount: payment.amount,
+            amountBs: amountBs,
+            reference: payment.reference,
+            createdAt: now,
+          ),
+        );
+      }
+
+      if (credit > 0) {
         await txn.insert('accounts', {
           'id': _uuid.v4(),
           'customer_id': customerId,
           'sale_id': saleId,
-          'total': total,
+          'total': credit,
           'paid': 0,
           'status': 'pendiente',
           'created_at': now.toIso8601String(),
@@ -196,6 +247,7 @@ class SaleRepository {
         status: status,
         createdAt: now,
         items: createdItems,
+        payments: createdPayments,
       );
     });
 
@@ -228,9 +280,17 @@ class SaleRepository {
       whereArgs: [id],
     );
 
+    final paymentRows = await db.query(
+      'payments',
+      where: 'sale_id = ?',
+      whereArgs: [id],
+      orderBy: 'created_at ASC',
+    );
+
     return Sale.fromMap(
       rows.first,
       items: itemRows.map(SaleItem.fromMap).toList(),
+      payments: paymentRows.map(SalePayment.fromMap).toList(),
     );
   }
 
