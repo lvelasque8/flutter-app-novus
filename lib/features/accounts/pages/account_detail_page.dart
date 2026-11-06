@@ -242,16 +242,25 @@ class _AccountCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          Row(
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               if (!account.isPaid)
                 AppButton(
-                  'Registrar abono',
+                  'Abonar',
                   icon: Icons.add_card,
                   size: AppButtonSize.small,
                   onPressed: () => _showAbono(context, ref),
                 ),
-              const SizedBox(width: AppSpacing.sm),
+              if (!account.isPaid)
+                AppButton(
+                  'Saldar cuenta',
+                  variant: AppButtonVariant.secondary,
+                  icon: Icons.check_circle_outline,
+                  size: AppButtonSize.small,
+                  onPressed: () => _showAbono(context, ref, full: true),
+                ),
               TextButton(
                 onPressed: () => _showPayments(context, payments.valueOrNull),
                 child: const Text('Ver abonos'),
@@ -263,10 +272,17 @@ class _AccountCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAbono(BuildContext context, WidgetRef ref) async {
+  Future<void> _showAbono(
+    BuildContext context,
+    WidgetRef ref, {
+    bool full = false,
+  }) async {
     final data = await showDialog<_AbonoData>(
       context: context,
-      builder: (context) => _AbonoDialog(balance: account.balance),
+      builder: (context) => _AbonoDialog(
+        balance: account.balance,
+        initialAmount: full ? account.balance : null,
+      ),
     );
     if (data == null) return;
 
@@ -352,18 +368,34 @@ class _AbonoData {
 }
 
 class _AbonoDialog extends StatefulWidget {
-  const _AbonoDialog({required this.balance});
+  const _AbonoDialog({required this.balance, this.initialAmount});
 
   final double balance;
+  final double? initialAmount;
 
   @override
   State<_AbonoDialog> createState() => _AbonoDialogState();
 }
 
 class _AbonoDialogState extends State<_AbonoDialog> {
-  final _amount = TextEditingController();
+  late final TextEditingController _amount;
   final _note = TextEditingController();
   String _method = 'efectivo_bs';
+
+  bool get _isFull {
+    final initial = widget.initialAmount;
+    return initial != null && (initial - widget.balance).abs() <= 0.005;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _amount = TextEditingController(
+      text: widget.initialAmount != null
+          ? widget.initialAmount!.toStringAsFixed(2)
+          : '',
+    );
+  }
 
   @override
   void dispose() {
@@ -404,7 +436,7 @@ class _AbonoDialogState extends State<_AbonoDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       scrollable: true,
-      title: const Text('Registrar abono'),
+      title: Text(_isFull ? 'Saldar cuenta' : 'Registrar abono'),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -416,12 +448,25 @@ class _AbonoDialogState extends State<_AbonoDialog> {
               variant: AppTextVariant.bodyMedium,
               color: AppColors.textSecondary,
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.xs),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _amount.text = widget.balance.toStringAsFixed(2);
+                  });
+                },
+                icon: const Icon(Icons.done_all, size: 18),
+                label: const Text('Pagar saldo completo'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             AppTextField(
               label: 'Monto (USD)',
               hint: '0,00',
               controller: _amount,
-              autofocus: true,
+              autofocus: widget.initialAmount == null,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
             ),

@@ -26,6 +26,10 @@
 |---|---|
 | ![Pago mixto](docs/screenshots/11-pago-mixto.png) | ![Detalle mixto](docs/screenshots/12-detalle-mixto.png) |
 
+| Saldar cuenta | Cuenta pagada |
+|---|---|
+| ![Saldar](docs/screenshots/13-saldar-cuenta.png) | ![Pagada](docs/screenshots/14-cuenta-pagada.png) |
+
 ## Instalar en la tablet
 
 1. Copia `dist/Novus-1.0.0-tablet.apk` a la tablet (cable USB, Google Drive o
@@ -59,6 +63,7 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 4. Si usas **Fiado** (total o parcial), crea/selecciona un cliente. La parte
    fiada queda en **Cuentas**.
 5. **Cuentas → cliente → Registrar abono**: registra un pago parcial o total.
+   Para cobrar todo el saldo de una vez, usa **Saldar cuenta**.
 6. **Ventas → venta → Imprimir / compartir nota**: genera el PDF con la leyenda
    “DOCUMENTO NO FISCAL”.
 7. **Inicio → Caja**: abre la caja con el fondo inicial, vende y luego ciérrala

@@ -18,7 +18,8 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
 - **Doble moneda**: precios en dólares y equivalente en bolívares con la tasa
   BCV configurada.
 - **Cuentas por cobrar**: fiados por cliente, saldo, historial de abonos y
-  registro de pagos parciales.
+  registro de pagos parciales. Incluye **Saldar cuenta** para cobrar el saldo
+  completo sin escribir el monto.
 - **Notas de entrega / recibos no fiscales**: PDF imprimible o compartible con
   correlativo, datos del negocio, ítems, totales y leyenda **“Documento no
   fiscal”**.
