@@ -48,9 +48,17 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 - Está pensada para **una sola caja/tablet**.
 - Todavía no hay exportación/restauración de respaldo.
 - No emite facturación fiscal (SENIAT); solo documentos no fiscales.
-- El APK está firmado con la clave de debug. Antes de distribuirlo fuera de la
-  tablet de demostración hay que crear un keystore de release.
 - La app no tiene bloqueo por PIN ni usuarios/roles.
+
+## Firma de la aplicación
+
+El APK de `dist/` está firmado con el keystore `android/novus-release.jks`
+(alias `novus`). Las credenciales están en `android/key.properties`, que **no
+se sube al repositorio**.
+
+Guarda una copia segura de `android/novus-release.jks` y de
+`android/key.properties`: sin ellos no podrás publicar actualizaciones que
+conserven los datos instalados.
 
 ## Datos de la demo
 

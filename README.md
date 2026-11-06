@@ -53,8 +53,9 @@ flutter build apk --release
 
 El APK queda en `build/app/outputs/flutter-apk/app-release.apk`.
 
-> La firma de release todavía usa la clave de debug. Antes de distribuir la app
-> fuera de la tablet de demostración hay que generar un keystore propio.
+> El APK de release se firma con `android/novus-release.jks` usando las
+> credenciales de `android/key.properties`. Guarda ambos archivos: son
+> necesarios para publicar actualizaciones que conserven los datos instalados.
 
 ## Estructura
 
