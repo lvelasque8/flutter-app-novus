@@ -20,14 +20,6 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  static const _titles = [
-    'Inicio',
-    'Vender',
-    'Inventario',
-    'Cuentas por cobrar',
-    'Ventas',
-  ];
-
   static const _destinations = [
     NavigationRailDestination(
       icon: Icon(Icons.dashboard_outlined),
@@ -156,7 +148,7 @@ class _MainShellState extends State<MainShell> {
 
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
-      title: _index == 0 ? null : Text(_titles[_index]),
+      title: null,
       centerTitle: false,
       actions: [
         IconButton(
