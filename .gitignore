@@ -46,6 +46,9 @@ app.*.map.json
 
 # Novus
 android/local.properties
+android/key.properties
+android/*.jks
+android/*.keystore
 android/build/
 android/app/build/
 android/.gradle/
