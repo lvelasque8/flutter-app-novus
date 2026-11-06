@@ -12,7 +12,6 @@ import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../cash/models/cash_session.dart';
 import '../../cash/providers/cash_providers.dart';
-import '../../rates/providers/rate_providers.dart';
 import '../../settings/models/business_settings.dart';
 import '../../settings/providers/settings_providers.dart';
 import '../providers/dashboard_providers.dart';
@@ -232,8 +231,6 @@ class DashboardPage extends ConsumerWidget {
     final updated = settings?.rateUpdatedAt;
 
     final extras = <String>[
-      if (rate > 0 && (settings?.rateSource.isNotEmpty ?? false))
-        rateSourceLabel(settings!.rateSource),
       if (updated != null) 'actualizada ${Money.date(updated)}',
     ];
 

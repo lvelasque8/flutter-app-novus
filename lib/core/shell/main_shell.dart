@@ -156,7 +156,7 @@ class _MainShellState extends State<MainShell> {
 
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
-      title: Text(_titles[_index]),
+      title: _index == 0 ? null : Text(_titles[_index]),
       centerTitle: false,
       actions: [
         IconButton(
