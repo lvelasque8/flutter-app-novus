@@ -74,11 +74,13 @@ class ReportMethodTotal {
   const ReportMethodTotal({
     required this.method,
     required this.totalUsd,
+    required this.totalBs,
     required this.count,
   });
 
   final String method;
   final double totalUsd;
+  final double totalBs;
   final int count;
 }
 

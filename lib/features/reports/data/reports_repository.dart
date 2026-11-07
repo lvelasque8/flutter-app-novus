@@ -45,6 +45,7 @@ class ReportsRepository {
       '''
       SELECT p.method,
              COALESCE(SUM(p.amount), 0) AS total,
+             COALESCE(SUM(p.amount_bs), 0) AS total_bs,
              COUNT(DISTINCT p.sale_id) AS count
       FROM payments p
       INNER JOIN sales s ON s.id = p.sale_id
@@ -100,6 +101,7 @@ class ReportsRepository {
             (row) => ReportMethodTotal(
               method: (row['method'] as String?) ?? '',
               totalUsd: ((row['total'] as num?) ?? 0).toDouble(),
+              totalBs: ((row['total_bs'] as num?) ?? 0).toDouble(),
               count: ((row['count'] as num?) ?? 0).toInt(),
             ),
           )

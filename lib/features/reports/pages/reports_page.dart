@@ -173,7 +173,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 900 ? 4 : 2;
+            final columns = constraints.maxWidth >= 700 ? 2 : 1;
             final spacing = AppSpacing.md;
             final width =
                 (constraints.maxWidth - spacing * (columns - 1)) / columns;
@@ -193,28 +193,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                 SizedBox(
                   width: width,
                   child: _SummaryCard(
-                    label: 'Ticket promedio',
-                    value: Money.usd(summary.averageTicket),
-                    detail: '${summary.salesCount} ventas',
+                    label: 'Ventas registradas',
+                    value: '${summary.salesCount}',
+                    detail: 'En el período seleccionado',
                     color: AppColors.secondary,
-                  ),
-                ),
-                SizedBox(
-                  width: width,
-                  child: _SummaryCard(
-                    label: 'IVA',
-                    value: Money.usd(summary.tax),
-                    detail: 'Descuentos ${Money.usd(summary.discount)}',
-                    color: AppColors.tertiary,
-                  ),
-                ),
-                SizedBox(
-                  width: width,
-                  child: _SummaryCard(
-                    label: 'Utilidad estimada',
-                    value: Money.usd(summary.profit),
-                    detail: 'Costo ${Money.usd(summary.cost)}',
-                    color: AppColors.accent,
                   ),
                 ),
               ],
@@ -260,37 +242,80 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         : data.byMethod
             .map((method) => method.totalUsd)
             .reduce((a, b) => a > b ? a : b);
+
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AppText(
-            'Ventas por forma de pago',
+            'Ventas por método de pago',
             variant: AppTextVariant.titleLarge,
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.xs),
+          const AppText(
+            'Total cobrado por Punto de venta, efectivo, Pago Móvil, '
+            'transferencia y fiado.',
+            variant: AppTextVariant.caption,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(height: AppSpacing.lg),
           ...data.byMethod.map(
             (method) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: AppText(
-                          PaymentMethods.label(method.method),
-                          variant: AppTextVariant.bodySmall,
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceContainer,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          _iconForMethod(method.method),
+                          size: 20,
+                          color: AppColors.primary,
                         ),
                       ),
-                      AppText(
-                        Money.usd(method.totalUsd),
-                        variant: AppTextVariant.titleSmall,
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              PaymentMethods.label(method.method),
+                              variant: AppTextVariant.titleSmall,
+                            ),
+                            AppText(
+                              '${method.count} venta(s)',
+                              variant: AppTextVariant.caption,
+                              color: AppColors.textHint,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          AppText(
+                            Money.usd(method.totalUsd),
+                            variant: AppTextVariant.titleSmall,
+                            color: AppColors.primary,
+                          ),
+                          AppText(
+                            Money.bs(method.totalBs),
+                            variant: AppTextVariant.caption,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
@@ -299,12 +324,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       backgroundColor: AppColors.surfaceContainer,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  AppText(
-                    '${method.count} ventas',
-                    variant: AppTextVariant.caption,
-                    color: AppColors.textHint,
-                  ),
                 ],
               ),
             ),
@@ -312,6 +331,24 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         ],
       ),
     );
+  }
+
+  IconData _iconForMethod(String method) {
+    switch (method) {
+      case PaymentMethods.puntoVenta:
+        return Icons.point_of_sale_outlined;
+      case PaymentMethods.efectivoBs:
+      case PaymentMethods.efectivoUsd:
+        return Icons.payments_outlined;
+      case PaymentMethods.pagoMovil:
+        return Icons.phone_android;
+      case PaymentMethods.transferencia:
+        return Icons.account_balance_outlined;
+      case PaymentMethods.fiado:
+        return Icons.receipt_long_outlined;
+      default:
+        return Icons.payments_outlined;
+    }
   }
 
   Widget _buildProducts(ReportsData data) {
@@ -341,8 +378,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             AppText(
-                              '${product.quantity} unidades · '
-                              'utilidad ${Money.usd(product.profit)}',
+                              '${product.quantity} unidades',
                               variant: AppTextVariant.caption,
                               color: AppColors.textHint,
                             ),
