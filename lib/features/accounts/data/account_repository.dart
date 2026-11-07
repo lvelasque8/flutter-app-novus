@@ -30,14 +30,20 @@ class AccountRepository {
     String address = '',
     String notes = '',
   }) async {
+    final normalizedName = name.trim();
+    final normalizedDocument = document.trim();
+    final normalizedPhone = phone.trim();
+
+    await _ensureUnique(document: normalizedDocument);
+
     final db = await AppDatabase.instance.database;
     final customer = Customer(
       id: _uuid.v4(),
-      name: name,
-      document: document,
-      phone: phone,
-      address: address,
-      notes: notes,
+      name: normalizedName,
+      document: normalizedDocument,
+      phone: normalizedPhone,
+      address: address.trim(),
+      notes: notes.trim(),
       createdAt: DateTime.now(),
     );
     await db.insert('customers', customer.toMap());
@@ -45,6 +51,11 @@ class AccountRepository {
   }
 
   Future<void> updateCustomer(Customer customer) async {
+    await _ensureUnique(
+      document: customer.document,
+      excludeId: customer.id,
+    );
+
     final db = await AppDatabase.instance.database;
     await db.update(
       'customers',
@@ -52,6 +63,35 @@ class AccountRepository {
       where: 'id = ?',
       whereArgs: [customer.id],
     );
+  }
+
+  Future<void> _ensureUnique({
+    required String document,
+    String? excludeId,
+  }) async {
+    final normalized = _normalizeDocument(document);
+    if (normalized.isEmpty) return;
+
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'customers',
+      columns: ['id', 'document'],
+      where: excludeId == null ? null : 'id != ?',
+      whereArgs: excludeId == null ? null : [excludeId],
+    );
+
+    for (final row in rows) {
+      final other = _normalizeDocument(
+        (row['document'] as String?) ?? '',
+      );
+      if (other == normalized) {
+        throw Exception('Ya existe un cliente con esa cédula o RIF');
+      }
+    }
+  }
+
+  String _normalizeDocument(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^0-9a-z]'), '');
   }
 
   Future<List<AccountSummary>> listSummaries() async {

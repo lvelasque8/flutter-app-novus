@@ -23,12 +23,14 @@ class DashboardPage extends ConsumerWidget {
     this.onInventory,
     this.onAccounts,
     this.onSales,
+    this.onReports,
   });
 
   final VoidCallback? onSell;
   final VoidCallback? onInventory;
   final VoidCallback? onAccounts;
   final VoidCallback? onSales;
+  final VoidCallback? onReports;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -168,7 +170,7 @@ class DashboardPage extends ConsumerWidget {
                   'Reportes',
                   variant: AppButtonVariant.secondary,
                   icon: Icons.bar_chart_outlined,
-                  onPressed: () => context.push(AppRoutes.reports),
+                  onPressed: onReports,
                 ),
               ],
             ),

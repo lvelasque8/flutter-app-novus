@@ -34,6 +34,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
   late final TextEditingController _phone;
   late final TextEditingController _address;
   bool _saving = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -57,13 +58,14 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
   Future<void> _save() async {
     final name = _name.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escribe el nombre del cliente')),
-      );
+      setState(() => _errorMessage = 'Escribe el nombre del cliente');
       return;
     }
 
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _errorMessage = null;
+    });
     final repo = ref.read(accountRepositoryProvider);
     try {
       Customer saved;
@@ -91,9 +93,8 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
       if (mounted) Navigator.pop(context, saved);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo guardar: $error')),
-        );
+        final message = error.toString().replaceFirst('Exception: ', '');
+        setState(() => _errorMessage = message);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -139,6 +140,16 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
                 controller: _address,
                 textCapitalization: TextCapitalization.sentences,
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

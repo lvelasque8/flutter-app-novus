@@ -7,6 +7,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../features/accounts/pages/accounts_page.dart';
 import '../../features/dashboard/pages/dashboard_page.dart';
 import '../../features/products/pages/inventory_page.dart';
+import '../../features/reports/pages/reports_page.dart';
 import '../../features/sales/pages/pos_page.dart';
 import '../../features/sales/pages/sales_history_page.dart';
 
@@ -46,6 +47,11 @@ class _MainShellState extends State<MainShell> {
       selectedIcon: Icon(Icons.history),
       label: Text('Ventas'),
     ),
+    NavigationRailDestination(
+      icon: Icon(Icons.bar_chart_outlined),
+      selectedIcon: Icon(Icons.bar_chart),
+      label: Text('Reportes'),
+    ),
   ];
 
   static const _bottomItems = [
@@ -74,6 +80,11 @@ class _MainShellState extends State<MainShell> {
       selectedIcon: Icon(Icons.history),
       label: 'Ventas',
     ),
+    NavigationDestination(
+      icon: Icon(Icons.bar_chart_outlined),
+      selectedIcon: Icon(Icons.bar_chart),
+      label: 'Reportes',
+    ),
   ];
 
   void _select(int index) {
@@ -93,11 +104,13 @@ class _MainShellState extends State<MainShell> {
           onInventory: () => _select(2),
           onAccounts: () => _select(3),
           onSales: () => _select(4),
+          onReports: () => _select(5),
         ),
         const POSPage(),
         const InventoryPage(),
         const AccountsPage(),
         const SalesHistoryPage(),
+        const ReportsPage(embedded: true),
       ],
     );
 

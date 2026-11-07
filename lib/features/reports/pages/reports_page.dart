@@ -11,7 +11,9 @@ import '../models/reports_data.dart';
 import '../providers/reports_providers.dart';
 
 class ReportsPage extends ConsumerStatefulWidget {
-  const ReportsPage({super.key});
+  const ReportsPage({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   ConsumerState<ReportsPage> createState() => _ReportsPageState();
@@ -72,10 +74,12 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final range = ref.watch(reportRangeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reportes'),
-        centerTitle: false,
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: const Text('Reportes'),
+              centerTitle: false,
+            ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1100),
