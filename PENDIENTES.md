@@ -2,13 +2,12 @@
 
 Cosas anotadas para una próxima versión.
 
-## Textos de cantidades (plurales)
+## Textos de cantidades (plurales) — ✅ hecho
 
-En **Reportes** los textos usan siempre el plural:
+Se corrigió el uso de "venta(s)" y "unidades" para que respeten el singular
+y el plural: `1 venta`, `4 ventas`, `1 unidad`, `12 unidades`.
 
-- `1 venta(s)` → debería decir `1 venta` / `4 ventas`
-- `1 unidades` en productos más vendidos → debería decir `1 unidad` / `4 unidades`
-
-Afecta a:
-
-- `lib/features/reports/pages/reports_page.dart` (métodos de pago y productos).
+Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
+(historial) y Cuentas por cobrar, usando el helper `TextoPlural`
+(`lib/core/utils/texto_plural.dart`) y su prueba en
+`test/texto_plural_test.dart`.

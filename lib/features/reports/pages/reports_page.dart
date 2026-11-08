@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/utils/texto_plural.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../sales/models/sale.dart';
@@ -291,7 +292,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                               variant: AppTextVariant.titleSmall,
                             ),
                             AppText(
-                              '${method.count} venta(s)',
+                              TextoPlural.de(method.count, 'venta', 'ventas'),
                               variant: AppTextVariant.caption,
                               color: AppColors.textHint,
                             ),
@@ -378,7 +379,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             AppText(
-                              '${product.quantity} unidades',
+                              TextoPlural.de(
+                                product.quantity,
+                                'unidad',
+                                'unidades',
+                              ),
                               variant: AppTextVariant.caption,
                               color: AppColors.textHint,
                             ),

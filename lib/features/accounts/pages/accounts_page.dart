@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/utils/texto_plural.dart';
 import '../../../shared/widgets/atoms/app_badge.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
@@ -300,7 +301,7 @@ class _CustomerDebtRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   AppText(
-                    '${summary.openAccounts} cuenta(s) abierta(s)'
+                    '${TextoPlural.de(summary.openAccounts, 'cuenta abierta', 'cuentas abiertas')}'
                     '${summary.customer.phone.isEmpty ? '' : ' · ${summary.customer.phone}'}',
                     variant: AppTextVariant.caption,
                     color: AppColors.textSecondary,

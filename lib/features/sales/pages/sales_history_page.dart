@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/utils/texto_plural.dart';
 import '../../../shared/widgets/atoms/app_badge.dart';
 import '../../../shared/widgets/atoms/app_search_field.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
@@ -91,7 +92,7 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
                     child: Row(
                       children: [
                         AppText(
-                          '${filtered.length} ventas',
+                          TextoPlural.de(filtered.length, 'venta', 'ventas'),
                           variant: AppTextVariant.bodySmall,
                           color: AppColors.textSecondary,
                         ),

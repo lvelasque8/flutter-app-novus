@@ -6,6 +6,7 @@ import '../../../core/navigation/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/money.dart';
+import '../../../core/utils/texto_plural.dart';
 import '../../../shared/widgets/atoms/app_badge.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
@@ -91,7 +92,7 @@ class DashboardPage extends ConsumerWidget {
                         value: Money.usd(data.todayTotal),
                         subtitle: rate > 0
                             ? Money.bs(data.todayTotal * rate)
-                            : '${data.todayCount} ventas',
+                            : TextoPlural.de(data.todayCount, 'venta', 'ventas'),
                         icon: Icons.payments_outlined,
                         color: AppColors.success,
                         onTap: onSales,
@@ -102,7 +103,11 @@ class DashboardPage extends ConsumerWidget {
                       child: _StatCard(
                         title: 'Cuentas por cobrar',
                         value: Money.usd(data.receivable),
-                        subtitle: '${data.openAccounts} cuentas abiertas',
+                        subtitle: TextoPlural.de(
+                          data.openAccounts,
+                          'cuenta abierta',
+                          'cuentas abiertas',
+                        ),
                         icon: Icons.receipt_long_outlined,
                         color: AppColors.tertiary,
                         onTap: onAccounts,
