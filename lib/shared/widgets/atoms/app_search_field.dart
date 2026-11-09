@@ -39,6 +39,9 @@ class AppSearchField extends StatefulWidget {
 
   final IconData? clearIcon;
 
+  /// Widget opcional a la derecha del campo (por ejemplo, botón de escanear).
+  final Widget? trailing;
+
   const AppSearchField({
     super.key,
     this.hint,
@@ -58,6 +61,7 @@ class AppSearchField extends StatefulWidget {
     this.showSearchButton = true,
     this.searchIcon,
     this.clearIcon,
+    this.trailing,
   });
 
   @override
@@ -152,18 +156,24 @@ class _AppSearchFieldState extends State<AppSearchField> {
   }
 
   Widget? _buildSuffixIcon(ThemeData theme) {
-    if (!widget.showClearButton || !_hasText) {
-      return null;
-    }
+    final clear = widget.showClearButton && _hasText
+        ? IconButton(
+            icon: Icon(
+              widget.clearIcon ?? Icons.clear,
+              size: _getIconSize(),
+              color: _getIconColor(theme),
+            ),
+            onPressed: _clearText,
+            tooltip: 'Limpiar',
+          )
+        : null;
 
-    return IconButton(
-      icon: Icon(
-        widget.clearIcon ?? Icons.clear,
-        size: _getIconSize(),
-        color: _getIconColor(theme),
-      ),
-      onPressed: _clearText,
-      tooltip: 'Clear',
+    if (widget.trailing == null) return clear;
+    if (clear == null) return widget.trailing;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [widget.trailing!, clear],
     );
   }
 

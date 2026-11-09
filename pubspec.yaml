@@ -50,6 +50,13 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
 
+  # Lector de código de barras con la cámara
+  mobile_scanner: ^7.5.0
+
+  # Impresión directa en impresora térmica Bluetooth (ESC/POS)
+  print_bluetooth_thermal: ^1.2.5
+  esc_pos_utils_plus: ^2.0.4
+
   # Respaldo y tasa de cambio
   http: ^1.2.0
   path_provider: ^2.1.5

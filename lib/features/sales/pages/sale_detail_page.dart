@@ -8,6 +8,7 @@ import '../../../shared/widgets/atoms/app_badge.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
+import '../../documents/data/thermal_printer_service.dart';
 import '../../documents/receipt_pdf.dart';
 import '../../settings/providers/settings_providers.dart';
 import '../models/sale.dart';
@@ -31,14 +32,60 @@ class SaleDetailPage extends ConsumerWidget {
           saleAsync.maybeWhen(
             data: (sale) => sale == null
                 ? const SizedBox.shrink()
-                : IconButton(
-                    tooltip: 'Imprimir nota',
-                    onPressed: () {
-                      final business = settings.valueOrNull;
-                      if (business == null) return;
-                      printSaleReceipt(sale: sale, settings: business);
-                    },
-                    icon: const Icon(Icons.print_outlined),
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Imprimir ticket (Bluetooth)',
+                        onPressed: () async {
+                          final business = settings.valueOrNull;
+                          if (business == null) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final service = ThermalPrinterService();
+                          final printer = await service.load();
+                          if (!printer.isConfigured) {
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Configura la impresora térmica en Ajustes',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                          try {
+                            await service.printSale(
+                              sale: sale,
+                              settings: business,
+                              printer: printer,
+                            );
+                            messenger.showSnackBar(
+                              const SnackBar(content: Text('Ticket impreso')),
+                            );
+                          } catch (error) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  error
+                                      .toString()
+                                      .replaceFirst('Exception: ', ''),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.print_outlined),
+                      ),
+                      IconButton(
+                        tooltip: 'Imprimir nota (PDF)',
+                        onPressed: () {
+                          final business = settings.valueOrNull;
+                          if (business == null) return;
+                          printSaleReceipt(sale: sale, settings: business);
+                        },
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                      ),
+                    ],
                   ),
             orElse: () => const SizedBox.shrink(),
           ),

@@ -24,6 +24,7 @@ import '../../sales/providers/sale_providers.dart';
 import '../data/settings_repository.dart';
 import '../models/business_settings.dart';
 import '../providers/settings_providers.dart';
+import '../widgets/printer_settings_card.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -383,6 +384,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.lg),
+                    PrinterSettingsCard(settings: value),
                     const SizedBox(height: AppSpacing.lg),
                     AppCard(
                       padding: const EdgeInsets.all(AppSpacing.xl),

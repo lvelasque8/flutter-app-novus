@@ -13,6 +13,7 @@ import '../../../shared/widgets/atoms/app_text_field.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../models/product.dart';
 import '../providers/product_providers.dart';
+import '../widgets/barcode_scanner_page.dart';
 
 class ProductFormPage extends ConsumerStatefulWidget {
   const ProductFormPage({super.key, this.productId});
@@ -172,6 +173,12 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
     );
   }
 
+  Future<void> _scanBarcode() async {
+    final code = await scanBarcode(context);
+    if (code == null || !mounted) return;
+    setState(() => _barcode.text = code);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.isEditing) {
@@ -267,6 +274,14 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
                       hint: 'Escanea o escribe el código',
                       controller: _barcode,
                       keyboardType: TextInputType.number,
+                      suffix: IconButton(
+                        tooltip: 'Escanear código de barras',
+                        onPressed: _scanBarcode,
+                        icon: const Icon(
+                          Icons.qr_code_scanner,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     const AppText(

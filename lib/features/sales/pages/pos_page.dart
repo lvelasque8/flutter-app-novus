@@ -14,9 +14,11 @@ import '../../accounts/providers/account_providers.dart';
 import '../../accounts/widgets/customer_picker_dialog.dart';
 import '../../cash/providers/cash_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
+import '../../documents/data/thermal_printer_service.dart';
 import '../../documents/receipt_pdf.dart';
 import '../../products/models/product.dart';
 import '../../products/providers/product_providers.dart';
+import '../../products/widgets/barcode_scanner_page.dart';
 import '../../settings/models/business_settings.dart';
 import '../../settings/providers/settings_providers.dart';
 import '../data/sale_repository.dart';
@@ -69,6 +71,23 @@ class _POSPageState extends ConsumerState<POSPage> {
     await _addProduct(product);
     _search.clear();
     setState(() => _query = '');
+  }
+
+  Future<void> _scanAndAdd() async {
+    final code = await scanBarcode(context);
+    if (code == null || !mounted) return;
+
+    final product = await ref
+        .read(productRepositoryProvider)
+        .findByBarcode(code.trim());
+    if (!mounted) return;
+    if (product == null) {
+      _show('No hay un producto con el código $code');
+      return;
+    }
+
+    await _addProduct(product);
+    if (mounted) _show('${product.name} agregado al carrito');
   }
 
   Future<void> _checkout(BusinessSettings settings) async {
@@ -142,6 +161,9 @@ class _POSPageState extends ConsumerState<POSPage> {
   }
 
   Future<void> _showSaleDone(Sale sale, BusinessSettings settings) async {
+    final printer = await ThermalPrinterService().load();
+    if (!mounted) return;
+
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -185,9 +207,18 @@ class _POSPageState extends ConsumerState<POSPage> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cerrar'),
           ),
+          if (printer.isConfigured)
+            AppButton(
+              'Imprimir ticket',
+              icon: Icons.print_outlined,
+              onPressed: () async {
+                Navigator.pop(context);
+                await _printThermal(sale, settings, printer);
+              },
+            ),
           AppButton(
-            'Imprimir nota',
-            icon: Icons.print_outlined,
+            'Nota PDF',
+            icon: Icons.picture_as_pdf_outlined,
             onPressed: () async {
               Navigator.pop(context);
               await printSaleReceipt(sale: sale, settings: settings);
@@ -196,6 +227,25 @@ class _POSPageState extends ConsumerState<POSPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _printThermal(
+    Sale sale,
+    BusinessSettings settings,
+    PrinterSettings printer,
+  ) async {
+    try {
+      await ThermalPrinterService().printSale(
+        sale: sale,
+        settings: settings,
+        printer: printer,
+      );
+      if (mounted) _show('Ticket impreso');
+    } catch (error) {
+      if (mounted) {
+        _show(error.toString().replaceFirst('Exception: ', ''));
+      }
+    }
   }
 
   Future<void> _pickCustomer() async {
@@ -388,6 +438,11 @@ class _POSPageState extends ConsumerState<POSPage> {
             hint: 'Buscar producto o escanear código...',
             onChanged: (value) => setState(() => _query = value),
             onSubmitted: _onSubmitted,
+            trailing: IconButton(
+              tooltip: 'Escanear código de barras',
+              onPressed: _scanAndAdd,
+              icon: const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+            ),
           ),
         ),
         Expanded(

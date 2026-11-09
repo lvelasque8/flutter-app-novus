@@ -10,6 +10,8 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
 
 - **Inventario**: alta, edición, búsqueda por nombre/código/categoría,
   control de stock y alertas de stock bajo.
+- **Lector de código de barras**: escanea con la cámara desde el POS o al
+  cargar un producto y lo agrega al carrito automáticamente.
 - **Ventas**: catálogo táctil, carrito, descuentos, IVA configurable y cobro en
   efectivo (Bs/USD), Pago Móvil, transferencia, punto de venta o fiado.
 - **Pagos combinados**: reparte el total entre varios métodos y deja el resto
@@ -23,16 +25,20 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
 - **Notas de entrega / recibos no fiscales**: PDF imprimible o compartible con
   correlativo, datos del negocio, ítems, totales y leyenda **“Documento no
   fiscal”**.
+- **Impresión térmica Bluetooth**: ticket ESC/POS directo en impresoras de
+  58 mm u 80 mm, con prueba de impresión desde Ajustes.
 - **Cierre de caja**: apertura con fondo, ventas del turno, efectivo esperado
   en Bs/USD, conteo físico y diferencia.
-- **Reportes por fecha**: ventas, ticket promedio, IVA, utilidad estimada,
-  formas de pago, productos más vendidos y ventas por día.
+- **Reportes por fecha**: ventas y montos cobrados por método de pago
+  (Punto de venta, Efectivo Bs/USD, Pago Móvil, transferencia y fiado),
+  productos más vendidos y ventas por día.
 - **Respaldo y restauración**: exporta la base por el menú de compartir y
   restaura un archivo `.db` desde Ajustes.
 - **Tasa BCV automática**: consulta la tasa oficial del día al abrir la app,
   con la API como respaldo y opción manual si no hay internet.
 - **Inicio**: ventas del día, cuentas por cobrar, stock bajo y últimas ventas.
-- **Ajustes**: datos del negocio, RIF, teléfono, dirección, tasa BCV e IVA.
+- **Ajustes**: datos del negocio, RIF, teléfono, dirección, tasa BCV, IVA e
+  impresora térmica.
 
 ## Cómo funciona el almacenamiento
 
@@ -104,7 +110,8 @@ abonos guardan la sesión de caja a la que pertenecen.
 ## Próximos pasos
 
 - Sincronización opcional (una caja hoy, varias después).
-- Lector de código de barras por cámara.
+- Anulación y devoluciones de ventas.
+- Entradas y ajustes de inventario con historial.
 - PIN/usuarios y roles.
 - Facturación fiscal (SENIAT), fuera del alcance actual.
 - Firma de release y publicación interna.
