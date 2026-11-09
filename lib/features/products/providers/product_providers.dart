@@ -24,6 +24,11 @@ final productByIdProvider = FutureProvider.family<Product?, String>((ref, id) {
   return ref.watch(productRepositoryProvider).getById(id);
 });
 
+/// Categorías sugeridas + las que ya se usaron en el inventario.
+final productCategoriesProvider = FutureProvider<List<String>>((ref) {
+  return ref.watch(productRepositoryProvider).categories();
+});
+
 final lowStockCountProvider = FutureProvider<int>((ref) {
   return ref.watch(productRepositoryProvider).lowStockCount();
 });

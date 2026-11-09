@@ -9,7 +9,9 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
 ## Funcionalidad de esta primera versión
 
 - **Inventario**: alta, edición, búsqueda por nombre/código/categoría,
-  control de stock y alertas de stock bajo.
+  control de stock y alertas de stock bajo. Incluye **categorías rápidas**,
+  **SKU automático**, validación de código de barras/SKU duplicados y
+  **Guardar y agregar otro** para cargar varios productos seguidos.
 - **Lector de código de barras**: escanea con la cámara desde el POS o al
   cargar un producto y lo agrega al carrito automáticamente.
 - **Ventas**: catálogo táctil, carrito, descuentos, IVA configurable y cobro en

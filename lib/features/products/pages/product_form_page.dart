@@ -35,6 +35,7 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
   final _cost = TextEditingController();
   final _stock = TextEditingController(text: '0');
   final _minStock = TextEditingController(text: '0');
+  final _nameFocus = FocusNode();
   bool _taxExempt = false;
   bool _loaded = false;
   bool _saving = false;
@@ -51,6 +52,7 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
     _cost.dispose();
     _stock.dispose();
     _minStock.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -70,9 +72,12 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
     _taxExempt = product.taxExempt;
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool andAnother = false}) async {
     final name = _name.text.trim();
     final price = Money.parse(_price.text);
+    final category = _category.text.trim();
+    var sku = _sku.text.trim();
+    final barcode = _barcode.text.trim();
 
     if (name.isEmpty) {
       _show('Escribe el nombre del producto');
@@ -87,12 +92,38 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
     final repo = ref.read(productRepositoryProvider);
 
     try {
+      // El código de barras no se puede repetir.
+      final sameBarcode = await repo.findByBarcodeOnly(
+        barcode,
+        excludeId: _product?.id,
+      );
+      if (sameBarcode != null) {
+        _show(
+          'Ya existe "${sameBarcode.name}" con ese código de barras',
+        );
+        return;
+      }
+
+      // Si el SKU está vacío se genera uno automático por categoría.
+      if (sku.isEmpty) {
+        sku = await repo.generateSku(category);
+      } else {
+        final sameSku = await repo.findBySku(
+          sku,
+          excludeId: _product?.id,
+        );
+        if (sameSku != null) {
+          _show('Ya existe "${sameSku.name}" con ese SKU');
+          return;
+        }
+      }
+
       if (widget.isEditing && _product != null) {
         final updated = _product!.copyWith(
           name: name,
-          category: _category.text.trim(),
-          sku: _sku.text.trim(),
-          barcode: _barcode.text.trim(),
+          category: category,
+          sku: sku,
+          barcode: barcode,
           price: price,
           cost: Money.parse(_cost.text),
           minStock: Money.parseInt(_minStock.text),
@@ -112,9 +143,9 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
       } else {
         await repo.create(
           name: name,
-          category: _category.text.trim(),
-          sku: _sku.text.trim(),
-          barcode: _barcode.text.trim(),
+          category: category,
+          sku: sku,
+          barcode: barcode,
           price: price,
           cost: Money.parse(_cost.text),
           stock: Money.parseInt(_stock.text),
@@ -125,8 +156,15 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
 
       ref.invalidate(productsProvider);
       ref.invalidate(activeProductsProvider);
+      ref.invalidate(productCategoriesProvider);
       ref.invalidate(dashboardProvider);
-      if (mounted) {
+
+      if (!mounted) return;
+
+      if (andAnother && !widget.isEditing) {
+        _resetForNext();
+        _show('Guardado. Listo para el siguiente producto.');
+      } else {
         _show('Producto guardado');
         context.pop();
       }
@@ -135,6 +173,20 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  void _resetForNext() {
+    setState(() {
+      _name.clear();
+      _sku.clear();
+      _barcode.clear();
+      _price.clear();
+      _cost.clear();
+      _stock.text = '0';
+      _minStock.text = '0';
+      _taxExempt = false;
+    });
+    _nameFocus.requestFocus();
   }
 
   Future<void> _delete() async {
@@ -244,6 +296,7 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
                       label: 'Nombre *',
                       hint: 'Ej: Harina PAN 1 kg',
                       controller: _name,
+                      focusNode: _nameFocus,
                       textCapitalization: TextCapitalization.sentences,
                       autofocus: !widget.isEditing,
                     ),
@@ -263,10 +316,17 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
                           child: AppTextField(
                             label: 'Código / SKU',
                             hint: 'Opcional',
+                            helperText: 'Se genera automático si lo dejas vacío',
                             controller: _sku,
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _CategoryChips(
+                      selected: _category.text,
+                      onSelected: (value) =>
+                          setState(() => _category.text = value),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextField(
@@ -377,11 +437,69 @@ class _ProductFormPageState extends ConsumerState<ProductFormPage> {
                   onPressed: _saving ? null : _save,
                 ),
               ),
+              if (!widget.isEditing) ...[
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  width: double.infinity,
+                  child: AppButton(
+                    'Guardar y agregar otro',
+                    variant: AppButtonVariant.secondary,
+                    icon: Icons.playlist_add,
+                    loading: _saving,
+                    onPressed:
+                        _saving ? null : () => _save(andAnother: true),
+                  ),
+                ),
+              ],
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Atajos de categorías para no escribirla cada vez.
+class _CategoryChips extends ConsumerWidget {
+  const _CategoryChips({required this.selected, required this.onSelected});
+
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final categories = ref.watch(productCategoriesProvider);
+
+    return categories.maybeWhen(
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppText(
+              'Categorías rápidas',
+              variant: AppTextVariant.caption,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                for (final category in items)
+                  ChoiceChip(
+                    label: Text(category),
+                    selected: selected.trim().toLowerCase() ==
+                        category.toLowerCase(),
+                    onSelected: (_) => onSelected(category),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }

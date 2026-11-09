@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
 import '../models/product.dart';
+import 'default_categories.dart';
 
 class ProductRepository {
   static const _uuid = Uuid();
@@ -47,6 +48,120 @@ class ProductRepository {
     );
     if (rows.isEmpty) return null;
     return Product.fromMap(rows.first);
+  }
+
+  /// Categorías para los atajos: las sugeridas primero y luego las que ya
+  /// usaste en el inventario.
+  Future<List<String>> categories() async {
+    final db = await AppDatabase.instance.database;
+    final rows = await db.rawQuery(
+      "SELECT DISTINCT category FROM products "
+      "WHERE active = 1 AND TRIM(category) != '' "
+      "ORDER BY category COLLATE NOCASE ASC",
+    );
+
+    final used = rows
+        .map((row) => ((row['category'] as String?) ?? '').trim())
+        .where((category) => category.isNotEmpty)
+        .toList();
+
+    final result = <String>[];
+    for (final category in [...defaultProductCategories, ...used]) {
+      final exists = result.any(
+        (item) => item.toLowerCase() == category.toLowerCase(),
+      );
+      if (!exists) result.add(category);
+    }
+    return result;
+  }
+
+  /// Busca otro producto con el mismo código de barras.
+  Future<Product?> findByBarcodeOnly(
+    String barcode, {
+    String? excludeId,
+  }) async {
+    final code = barcode.trim();
+    if (code.isEmpty) return null;
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'products',
+      where: excludeId == null
+          ? 'LOWER(barcode) = ?'
+          : 'LOWER(barcode) = ? AND id != ?',
+      whereArgs: [
+        code.toLowerCase(),
+        if (excludeId != null) excludeId,
+      ],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Product.fromMap(rows.first);
+  }
+
+  /// Busca otro producto con el mismo SKU.
+  Future<Product?> findBySku(String sku, {String? excludeId}) async {
+    final code = sku.trim();
+    if (code.isEmpty) return null;
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'products',
+      where: excludeId == null
+          ? 'LOWER(sku) = ?'
+          : 'LOWER(sku) = ? AND id != ?',
+      whereArgs: [
+        code.toLowerCase(),
+        if (excludeId != null) excludeId,
+      ],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Product.fromMap(rows.first);
+  }
+
+  /// Genera un SKU corto a partir de la categoría, por ejemplo `ALI-0007`.
+  Future<String> generateSku(String category) async {
+    final prefix = _categoryPrefix(category);
+    final db = await AppDatabase.instance.database;
+    final rows = await db.query(
+      'products',
+      columns: ['sku'],
+      where: 'sku LIKE ?',
+      whereArgs: ['$prefix-%'],
+    );
+
+    var max = 0;
+    for (final row in rows) {
+      final sku = (row['sku'] as String?) ?? '';
+      final suffix = sku.split('-').last;
+      final number = int.tryParse(suffix);
+      if (number != null && number > max) max = number;
+    }
+
+    return '$prefix-${(max + 1).toString().padLeft(4, '0')}';
+  }
+
+  String _categoryPrefix(String category) {
+    final normalized = _withoutAccents(category.trim().toUpperCase());
+    final letters = normalized.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (letters.isEmpty) return 'PRO';
+    return letters.substring(0, letters.length >= 3 ? 3 : letters.length);
+  }
+
+  String _withoutAccents(String value) {
+    const replacements = {
+      'Á': 'A',
+      'É': 'E',
+      'Í': 'I',
+      'Ó': 'O',
+      'Ú': 'U',
+      'Ü': 'U',
+      'Ñ': 'N',
+    };
+    var result = value;
+    replacements.forEach((key, letter) {
+      result = result.replaceAll(key, letter);
+    });
+    return result;
   }
 
   Future<void> save(Product product) async {
