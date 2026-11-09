@@ -60,7 +60,7 @@ class CashRepository {
         COALESCE(SUM(total), 0) AS total,
         COALESCE(SUM(total_bs), 0) AS total_bs
       FROM sales
-      WHERE cash_session_id = ?
+      WHERE cash_session_id = ? AND cancelled = 0
       ''',
       [session.id],
     );
@@ -81,7 +81,7 @@ class CashRepository {
              COALESCE(SUM(p.amount_bs), 0) AS total_bs
       FROM payments p
       INNER JOIN sales s ON s.id = p.sale_id
-      WHERE s.cash_session_id = ?
+      WHERE s.cash_session_id = ? AND s.cancelled = 0
       GROUP BY p.method
       ''',
       [session.id],
@@ -190,7 +190,8 @@ class CashRepository {
   Future<int> salesCountForSession(String sessionId) async {
     final db = await AppDatabase.instance.database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) AS total FROM sales WHERE cash_session_id = ?',
+      'SELECT COUNT(*) AS total FROM sales '
+      'WHERE cash_session_id = ? AND cancelled = 0',
       [sessionId],
     );
     return Sqflite.firstIntValue(result) ?? 0;

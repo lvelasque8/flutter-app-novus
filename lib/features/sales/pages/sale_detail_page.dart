@@ -8,8 +8,13 @@ import '../../../shared/widgets/atoms/app_badge.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
+import '../../accounts/providers/account_providers.dart';
+import '../../cash/providers/cash_providers.dart';
+import '../../dashboard/providers/dashboard_providers.dart';
 import '../../documents/data/thermal_printer_service.dart';
 import '../../documents/receipt_pdf.dart';
+import '../../products/providers/product_providers.dart';
+import '../../reports/providers/reports_providers.dart';
 import '../../settings/providers/settings_providers.dart';
 import '../models/sale.dart';
 import '../providers/sale_providers.dart';
@@ -131,7 +136,12 @@ class SaleDetailPage extends ConsumerWidget {
                                 ],
                               ),
                             ),
-                            if (sale.isCredit)
+                            if (sale.isCancelled)
+                              const AppBadge(
+                                'Anulada',
+                                variant: AppBadgeVariant.error,
+                              )
+                            else if (sale.isCredit)
                               const AppBadge(
                                 'Fiado · pendiente',
                                 variant: AppBadgeVariant.warning,
@@ -185,6 +195,21 @@ class SaleDetailPage extends ConsumerWidget {
                               ? '${Money.bs(sale.rate)} / USD'
                               : 'No registrada',
                         ),
+                        if (sale.isCancelled) ...[
+                          const Divider(height: AppSpacing.lg),
+                          _InfoRow(
+                            label: 'Anulada',
+                            value: sale.cancelledAt == null
+                                ? 'Sí'
+                                : Money.dateTime(sale.cancelledAt!),
+                          ),
+                          if (sale.cancelReason != null &&
+                              sale.cancelReason!.isNotEmpty)
+                            _InfoRow(
+                              label: 'Motivo',
+                              value: sale.cancelReason!,
+                            ),
+                        ],
                       ],
                     ),
                   ),
@@ -278,6 +303,19 @@ class SaleDetailPage extends ConsumerWidget {
                       printSaleReceipt(sale: sale, settings: business);
                     },
                   ),
+                  if (!sale.isCancelled) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    AppButton(
+                      'Anular venta',
+                      variant: AppButtonVariant.danger,
+                      icon: Icons.block_outlined,
+                      onPressed: () => _confirmCancelSale(
+                        context,
+                        ref,
+                        sale,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xl),
                 ],
               ),
@@ -286,6 +324,88 @@ class SaleDetailPage extends ConsumerWidget {
         },
       ),
     );
+  }
+}
+
+Future<void> _confirmCancelSale(
+  BuildContext context,
+  WidgetRef ref,
+  Sale sale,
+) async {
+  final reason = TextEditingController();
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Anular venta ${sale.number}'),
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Se devolverá el stock de los productos y la venta dejará de '
+              'sumar en caja, reportes y cuentas por cobrar.'
+              '${sale.isCredit ? ' También se anulará el fiado de esta venta.' : ''}',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reason,
+              decoration: const InputDecoration(
+                labelText: 'Motivo (opcional)',
+                hintText: 'Ej: error de cobro, producto devuelto',
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Anular venta'),
+        ),
+      ],
+    ),
+  );
+
+  final text = reason.text.trim();
+  reason.dispose();
+  if (confirmed != true) return;
+
+  try {
+    await ref.read(saleRepositoryProvider).cancelSale(sale.id, reason: text);
+    ref.invalidate(salesProvider);
+    ref.invalidate(saleByIdProvider(sale.id));
+    ref.invalidate(todayTotalProvider);
+    ref.invalidate(todayCountProvider);
+    ref.invalidate(dashboardProvider);
+    ref.invalidate(cashSummaryProvider);
+    ref.invalidate(reportsProvider);
+    ref.invalidate(accountsProvider);
+    ref.invalidate(receivableTotalProvider);
+    ref.invalidate(openAccountsCountProvider);
+    ref.invalidate(activeProductsProvider);
+    ref.invalidate(productsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Venta ${sale.number} anulada')),
+      );
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.toString().replaceFirst('Exception: ', ''),
+          ),
+        ),
+      );
+    }
   }
 }
 

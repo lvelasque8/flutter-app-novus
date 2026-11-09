@@ -129,6 +129,40 @@ class SaleRepository {
         }
       }
 
+      // Límite de crédito del cliente (0 = sin límite).
+      if (credit > 0 && customerId != null) {
+        final customerRows = await txn.query(
+          'customers',
+          columns: ['credit_limit'],
+          where: 'id = ?',
+          whereArgs: [customerId],
+          limit: 1,
+        );
+        final limit = customerRows.isEmpty
+            ? 0.0
+            : ((customerRows.first['credit_limit'] as num?) ?? 0).toDouble();
+        if (limit > 0) {
+          final balanceResult = await txn.rawQuery(
+            '''
+            SELECT COALESCE(SUM(total - paid), 0) AS balance
+            FROM accounts
+            WHERE customer_id = ? AND cancelled = 0 AND status != 'pagada'
+            ''',
+            [customerId],
+          );
+          final balance =
+              ((balanceResult.first['balance'] as num?) ?? 0).toDouble();
+          if (balance + credit > limit + 0.005) {
+            throw Exception(
+              '${customerName ?? 'El cliente'} supera su límite de crédito '
+              'de ${limit.toStringAsFixed(2)} USD '
+              '(saldo ${balance.toStringAsFixed(2)} + '
+              'fiado ${credit.toStringAsFixed(2)})',
+            );
+          }
+        }
+      }
+
       final countResult = await txn.rawQuery(
         'SELECT COUNT(*) AS total FROM sales',
       );
@@ -254,10 +288,14 @@ class SaleRepository {
     return sale;
   }
 
-  Future<List<Sale>> list({int limit = 100}) async {
+  Future<List<Sale>> list({
+    int limit = 100,
+    bool includeCancelled = true,
+  }) async {
     final db = await AppDatabase.instance.database;
     final rows = await db.query(
       'sales',
+      where: includeCancelled ? null : 'cancelled = 0',
       orderBy: 'created_at DESC',
       limit: limit,
     );
@@ -311,7 +349,8 @@ class SaleRepository {
     final start = DateTime.now();
     final startOfDay = DateTime(start.year, start.month, start.day);
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE created_at >= ?',
+      'SELECT COALESCE(SUM(total), 0) AS total FROM sales '
+      'WHERE created_at >= ? AND cancelled = 0',
       [startOfDay.toIso8601String()],
     );
     return ((result.first['total'] as num?) ?? 0).toDouble();
@@ -322,9 +361,99 @@ class SaleRepository {
     final start = DateTime.now();
     final startOfDay = DateTime(start.year, start.month, start.day);
     final result = await db.rawQuery(
-      'SELECT COUNT(*) AS total FROM sales WHERE created_at >= ?',
+      'SELECT COUNT(*) AS total FROM sales '
+      'WHERE created_at >= ? AND cancelled = 0',
       [startOfDay.toIso8601String()],
     );
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  /// Anula una venta: devuelve el stock, marca la venta y anula su fiado.
+  ///
+  /// No se permite si la cuenta ya tiene abonos registrados.
+  Future<void> cancelSale(String saleId, {String reason = ''}) async {
+    final db = await AppDatabase.instance.database;
+    final now = DateTime.now();
+
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: [saleId],
+        limit: 1,
+      );
+      if (rows.isEmpty) {
+        throw Exception('Venta no encontrada');
+      }
+
+      final sale = Sale.fromMap(rows.first);
+      if (sale.cancelled) {
+        throw Exception('Esta venta ya está anulada');
+      }
+
+      final accountRows = await txn.query(
+        'accounts',
+        where: 'sale_id = ?',
+        whereArgs: [saleId],
+      );
+      for (final account in accountRows) {
+        final paid = ((account['paid'] as num?) ?? 0).toDouble();
+        if (paid > 0.005) {
+          throw Exception(
+            'La venta tiene abonos registrados. Anula o corrige los abonos '
+            'antes de anularla.',
+          );
+        }
+      }
+
+      final itemRows = await txn.query(
+        'sale_items',
+        where: 'sale_id = ?',
+        whereArgs: [saleId],
+      );
+
+      for (final item in itemRows) {
+        final productId = item['product_id'] as String?;
+        final quantity = ((item['quantity'] as num?) ?? 0).toInt();
+        if (productId == null ||
+            productId.isEmpty ||
+            quantity <= 0) {
+          continue;
+        }
+
+        await txn.rawUpdate(
+          'UPDATE products SET stock = stock + ?, updated_at = ? WHERE id = ?',
+          [quantity, now.toIso8601String(), productId],
+        );
+
+        await txn.insert('inventory_movements', {
+          'id': _uuid.v4(),
+          'product_id': productId,
+          'type': 'anulacion',
+          'quantity': quantity,
+          'reference': 'Anulación ${sale.number}',
+          'created_at': now.toIso8601String(),
+        });
+      }
+
+      await txn.update(
+        'sales',
+        {
+          'cancelled': 1,
+          'cancelled_at': now.toIso8601String(),
+          'cancel_reason':
+              reason.trim().isEmpty ? null : reason.trim(),
+        },
+        where: 'id = ?',
+        whereArgs: [saleId],
+      );
+
+      await txn.update(
+        'accounts',
+        {'cancelled': 1, 'status': 'anulada'},
+        where: 'sale_id = ?',
+        whereArgs: [saleId],
+      );
+    });
   }
 }

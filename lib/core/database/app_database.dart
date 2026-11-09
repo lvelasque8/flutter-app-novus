@@ -10,7 +10,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int _version = 3;
+  static const int _version = 4;
 
   Database? _db;
   String? _path;
@@ -79,6 +79,7 @@ class AppDatabase {
         phone TEXT,
         address TEXT,
         notes TEXT,
+        credit_limit REAL NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL
       )
     ''');
@@ -118,6 +119,9 @@ class AppDatabase {
         status TEXT NOT NULL,
         cash_session_id TEXT,
         note TEXT,
+        cancelled INTEGER NOT NULL DEFAULT 0,
+        cancelled_at TEXT,
+        cancel_reason TEXT,
         created_at TEXT NOT NULL
       )
     ''');
@@ -158,6 +162,7 @@ class AppDatabase {
         paid REAL NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'pendiente',
         due_date TEXT,
+        cancelled INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         FOREIGN KEY (customer_id) REFERENCES customers (id)
       )
@@ -270,6 +275,29 @@ class AppDatabase {
           SELECT 1 FROM payments p WHERE p.sale_id = s.id
         )
       ''');
+    }
+
+    if (oldVersion < 4) {
+      await _addColumn(
+        db,
+        'sales',
+        'cancelled',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
+      await _addColumn(db, 'sales', 'cancelled_at', 'TEXT');
+      await _addColumn(db, 'sales', 'cancel_reason', 'TEXT');
+      await _addColumn(
+        db,
+        'customers',
+        'credit_limit',
+        'REAL NOT NULL DEFAULT 0',
+      );
+      await _addColumn(
+        db,
+        'accounts',
+        'cancelled',
+        'INTEGER NOT NULL DEFAULT 0',
+      );
     }
   }
 

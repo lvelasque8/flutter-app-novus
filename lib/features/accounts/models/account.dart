@@ -7,6 +7,7 @@ class Customer {
     required this.address,
     required this.notes,
     required this.createdAt,
+    this.creditLimit = 0,
   });
 
   final String id;
@@ -17,6 +18,11 @@ class Customer {
   final String notes;
   final DateTime createdAt;
 
+  /// Límite de fiado en dólares. `0` significa sin límite.
+  final double creditLimit;
+
+  bool get hasCreditLimit => creditLimit > 0;
+
   Map<String, Object?> toMap() {
     return {
       'id': id,
@@ -25,6 +31,7 @@ class Customer {
       'phone': phone,
       'address': address,
       'notes': notes,
+      'credit_limit': creditLimit,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -39,6 +46,7 @@ class Customer {
       notes: (map['notes'] as String?) ?? '',
       createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??
           DateTime.now(),
+      creditLimit: ((map['credit_limit'] as num?) ?? 0).toDouble(),
     );
   }
 }
@@ -53,6 +61,7 @@ class Account {
     required this.status,
     required this.createdAt,
     this.dueDate,
+    this.cancelled = false,
   });
 
   final String id;
@@ -63,6 +72,7 @@ class Account {
   final String status;
   final DateTime createdAt;
   final DateTime? dueDate;
+  final bool cancelled;
 
   double get balance => (total - paid).clamp(0, double.infinity);
   bool get isPaid => status == 'pagada' || balance <= 0.005;
@@ -76,6 +86,7 @@ class Account {
       'paid': paid,
       'status': status,
       'due_date': dueDate?.toIso8601String(),
+      'cancelled': cancelled ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -91,6 +102,7 @@ class Account {
       createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??
           DateTime.now(),
       dueDate: DateTime.tryParse((map['due_date'] as String?) ?? ''),
+      cancelled: ((map['cancelled'] as num?) ?? 0) == 1,
     );
   }
 }

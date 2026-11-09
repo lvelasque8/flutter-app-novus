@@ -129,6 +129,21 @@ class AccountDetailPage extends ConsumerWidget {
                             ),
                           ],
                         ),
+                        if (customer != null && customer.hasCreditLimit) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          AppText(
+                            balance > customer.creditLimit
+                                ? 'Límite de crédito: '
+                                    '${Money.usd(customer.creditLimit)} · '
+                                    'Excedido'
+                                : 'Límite de crédito: '
+                                    '${Money.usd(customer.creditLimit)}',
+                            variant: AppTextVariant.bodySmall,
+                            color: balance > customer.creditLimit
+                                ? AppColors.error
+                                : AppColors.textSecondary,
+                          ),
+                        ],
                       ],
                     ),
                   ),

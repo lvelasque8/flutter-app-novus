@@ -16,6 +16,7 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
   cargar un producto y lo agrega al carrito automáticamente.
 - **Ventas**: catálogo táctil, carrito, descuentos, IVA configurable y cobro en
   efectivo (Bs/USD), Pago Móvil, transferencia, punto de venta o fiado.
+  Incluye **anulación de ventas** con devolución de stock.
 - **Pagos combinados**: reparte el total entre varios métodos y deja el resto
   como fiado. Ejemplo: $1,00 en efectivo + $2,48 por Pago Móvil, o efectivo +
   fiado parcial.
@@ -23,7 +24,7 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
   BCV configurada.
 - **Cuentas por cobrar**: fiados por cliente, saldo, historial de abonos y
   registro de pagos parciales. Incluye **Saldar cuenta** para cobrar el saldo
-  completo sin escribir el monto.
+  completo sin escribir el monto y **límite de crédito** por cliente.
 - **Notas de entrega / recibos no fiscales**: PDF imprimible o compartible con
   correlativo, datos del negocio, ítems, totales y leyenda **“Documento no
   fiscal”**.

@@ -211,7 +211,13 @@ class _SaleTile extends StatelessWidget {
                         variant: AppTextVariant.titleSmall,
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      if (sale.isCredit)
+                      if (sale.isCancelled)
+                        const AppBadge(
+                          'Anulada',
+                          variant: AppBadgeVariant.error,
+                          size: AppBadgeSize.small,
+                        )
+                      else if (sale.isCredit)
                         const AppBadge(
                           'Fiado',
                           variant: AppBadgeVariant.warning,

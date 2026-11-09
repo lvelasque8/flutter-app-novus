@@ -64,21 +64,25 @@ adb install -r dist/Novus-1.0.0-tablet.apk
    fiada queda en **Cuentas**.
 5. **Cuentas → cliente → Registrar abono**: registra un pago parcial o total.
    Para cobrar todo el saldo de una vez, usa **Saldar cuenta**.
-6. **Ventas → venta → Imprimir / compartir nota**: genera el PDF con la leyenda
+6. **Cuentas → Nuevo cliente**: puedes fijar un **límite de crédito** en USD.
+   Si el cliente lo supera, la app no deja cerrar el fiado.
+7. **Ventas → venta → Anular venta**: devuelve el stock, saca la venta de caja y
+   reportes, y anula el fiado. No se permite si la cuenta ya tiene abonos.
+8. **Ventas → venta → Imprimir / compartir nota**: genera el PDF con la leyenda
    “DOCUMENTO NO FISCAL”.
-7. **Inicio → Caja**: abre la caja con el fondo inicial, vende y luego ciérrala
+9. **Inicio → Caja**: abre la caja con el fondo inicial, vende y luego ciérrala
    contando el efectivo en Bs y USD. La diferencia queda en el historial.
-8. **Inicio → Reportes**: cambia entre Hoy, 7 días, Este mes o un rango
+10. **Inicio → Reportes**: cambia entre Hoy, 7 días, Este mes o un rango
    personalizado. Verás el total vendido, las ventas registradas y el desglose
    por método de pago (Punto de venta, Efectivo Bs/USD, Pago Móvil,
    transferencia y fiado), además de los productos más vendidos.
-9. **Ajustes → Actualizar BCV**: trae la tasa oficial del día. También se
+11. **Ajustes → Actualizar BCV**: trae la tasa oficial del día. También se
    intenta actualizar sola al abrir la app.
-10. **Ajustes → Exportar respaldo**: comparte un archivo `.db` por WhatsApp,
+12. **Ajustes → Exportar respaldo**: comparte un archivo `.db` por WhatsApp,
     Drive o correo. **Restaurar respaldo** recupera ese archivo.
-11. **Vender → ícono de escanear**: apunta al código de barras y el producto se
+13. **Vender → ícono de escanear**: apunta al código de barras y el producto se
     agrega al carrito.
-12. **Ajustes → Impresora térmica**: empareja la impresora desde Bluetooth de
+14. **Ajustes → Impresora térmica**: empareja la impresora desde Bluetooth de
     Android, elígela, selecciona 58/80 mm y usa **Imprimir prueba**. Luego, al
     cobrar, aparece **Imprimir ticket**.
 
@@ -89,7 +93,8 @@ adb install -r dist/Novus-1.0.0-tablet.apk
   código de barras/SKU duplicado y **Guardar y agregar otro**.
 - Lector de código de barras con la cámara desde el POS y desde el producto.
 - Ventas con IVA configurable, descuento y doble moneda (USD/Bs).
-- Cuentas por cobrar con abonos y saldo por cliente.
+- Anulación de ventas con devolución de stock y anulación del fiado.
+- Cuentas por cobrar con abonos, saldo por cliente y límite de crédito.
 - Cierre de caja con fondo, efectivo esperado, conteo y diferencia.
 - Reportes por rango de fechas con totales por método de pago.
 - Impresión de ticket en impresora térmica Bluetooth (ESC/POS, 58/80 mm).
@@ -105,7 +110,8 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 - No emite facturación fiscal (SENIAT); solo documentos no fiscales.
 - La app no tiene bloqueo por PIN ni usuarios/roles.
 - La sincronización entre varias cajas queda para una fase posterior.
-- No se pueden anular ventas ni hacer devoluciones todavía.
+- No se pueden hacer devoluciones parciales: la anulación es de la venta
+  completa y no se permite si la cuenta ya tiene abonos.
 - El lector de barras necesita permiso de cámara; la impresora debe ser
   Bluetooth ESC/POS (no USB ni red por ahora).
 - El APK es universal (~72 MB, incluye el lector de códigos); se puede dividir

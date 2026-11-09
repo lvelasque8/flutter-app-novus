@@ -112,6 +112,9 @@ class Sale {
     required this.createdAt,
     this.items = const [],
     this.payments = const [],
+    this.cancelled = false,
+    this.cancelledAt,
+    this.cancelReason,
   });
 
   final String id;
@@ -133,9 +136,21 @@ class Sale {
   final List<SaleItem> items;
   final List<SalePayment> payments;
 
-  bool get isCredit => status == 'pendiente';
+  /// Una venta anulada no suma en caja, reportes ni cuentas por cobrar.
+  final bool cancelled;
+  final DateTime? cancelledAt;
+  final String? cancelReason;
 
-  Sale copyWith({List<SaleItem>? items, List<SalePayment>? payments}) {
+  bool get isCredit => status == 'pendiente';
+  bool get isCancelled => cancelled;
+
+  Sale copyWith({
+    List<SaleItem>? items,
+    List<SalePayment>? payments,
+    bool? cancelled,
+    DateTime? cancelledAt,
+    String? cancelReason,
+  }) {
     return Sale(
       id: id,
       number: number,
@@ -153,6 +168,9 @@ class Sale {
       createdAt: createdAt,
       items: items ?? this.items,
       payments: payments ?? this.payments,
+      cancelled: cancelled ?? this.cancelled,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
+      cancelReason: cancelReason ?? this.cancelReason,
     );
   }
 
@@ -171,6 +189,9 @@ class Sale {
       'payment_method': paymentMethod,
       'reference': reference,
       'status': status,
+      'cancelled': cancelled ? 1 : 0,
+      'cancelled_at': cancelledAt?.toIso8601String(),
+      'cancel_reason': cancelReason,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -198,6 +219,11 @@ class Sale {
           DateTime.now(),
       items: items ?? const [],
       payments: payments ?? const [],
+      cancelled: ((map['cancelled'] as num?) ?? 0) == 1,
+      cancelledAt: DateTime.tryParse(
+        (map['cancelled_at'] as String?) ?? '',
+      ),
+      cancelReason: map['cancel_reason'] as String?,
     );
   }
 }

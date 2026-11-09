@@ -9,6 +9,7 @@ import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../../shared/widgets/atoms/app_text_field.dart';
 import '../../accounts/models/account.dart';
+import '../../accounts/providers/account_providers.dart';
 import '../../accounts/widgets/customer_picker_dialog.dart';
 import '../models/sale.dart';
 
@@ -69,6 +70,9 @@ class _PaymentDialog extends ConsumerStatefulWidget {
 class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
   late final List<_PaymentLineState> _lines;
   late Customer? _customer;
+  Future<double>? _balanceFuture;
+  String? _limitError;
+  bool _confirming = false;
 
   @override
   void initState() {
@@ -83,6 +87,17 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
         amount: widget.total.toStringAsFixed(2),
       ),
     ];
+    _refreshBalance();
+  }
+
+  void _refreshBalance() {
+    final customer = _customer;
+    if (customer == null) {
+      _balanceFuture = null;
+      return;
+    }
+    _balanceFuture =
+        ref.read(accountRepositoryProvider).balanceForCustomer(customer.id);
   }
 
   @override
@@ -104,6 +119,15 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
   bool get _balanced => _remaining.abs() <= 0.009;
   bool get _hasCredit =>
       _lines.any((line) => PaymentMethods.isCredit(line.method));
+
+  double get _creditAmount {
+    return _lines
+        .where((line) => PaymentMethods.isCredit(line.method))
+        .fold<double>(
+          0,
+          (sum, line) => sum + Money.parse(line.amount.text),
+        );
+  }
 
   void _addLine() {
     final method = widget.rate > 0
@@ -139,25 +163,50 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
     });
   }
 
-  void _confirm() {
-    if (!_balanced) return;
+  Future<void> _confirm() async {
+    if (!_balanced || _confirming) return;
     if (_hasCredit && _customer == null) return;
 
-    final lines = _lines
-        .map(
-          (line) => PaymentLine(
-            method: line.method,
-            amount: Money.parse(line.amount.text),
-            reference: line.reference.text.trim(),
-          ),
-        )
-        .where((line) => line.amount > 0)
-        .toList();
+    setState(() {
+      _confirming = true;
+      _limitError = null;
+    });
 
-    Navigator.pop(
-      context,
-      PaymentSelection(lines: lines, customer: _customer),
-    );
+    try {
+      if (_hasCredit && _customer != null) {
+        final balance = await ref
+            .read(accountRepositoryProvider)
+            .balanceForCustomer(_customer!.id);
+        final limit = _customer!.creditLimit;
+        if (limit > 0 && balance + _creditAmount > limit + 0.005) {
+          setState(() {
+            _limitError =
+                '${_customer!.name} debe ${Money.usd(balance)} y su límite '
+                'es ${Money.usd(limit)}. Con este fiado de '
+                '${Money.usd(_creditAmount)} se pasaría.';
+          });
+          return;
+        }
+      }
+
+      final lines = _lines
+          .map(
+            (line) => PaymentLine(
+              method: line.method,
+              amount: Money.parse(line.amount.text),
+              reference: line.reference.text.trim(),
+            ),
+          )
+          .where((line) => line.amount > 0)
+          .toList();
+
+      Navigator.pop(
+        context,
+        PaymentSelection(lines: lines, customer: _customer),
+      );
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
   }
 
   IconData _iconFor(String method) {
@@ -180,7 +229,8 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final canConfirm = _balanced && (!_hasCredit || _customer != null);
+    final canConfirm =
+        _balanced && (!_hasCredit || _customer != null) && !_confirming;
 
     return AlertDialog(
       scrollable: true,
@@ -297,7 +347,11 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
                 onTap: () async {
                   final selected = await showCustomerPicker(context);
                   if (selected != null) {
-                    setState(() => _customer = selected);
+                    setState(() {
+                      _customer = selected;
+                      _limitError = null;
+                      _refreshBalance();
+                    });
                   }
                 },
                 borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -331,6 +385,57 @@ class _PaymentDialogState extends ConsumerState<_PaymentDialog> {
                   ),
                 ),
               ),
+              if (_customer != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                FutureBuilder<double>(
+                  future: _balanceFuture,
+                  builder: (context, snapshot) {
+                    final balance = snapshot.data;
+                    if (balance == null) {
+                      return const AppText(
+                        'Consultando saldo del cliente...',
+                        variant: AppTextVariant.caption,
+                        color: AppColors.textSecondary,
+                      );
+                    }
+                    final limit = _customer!.creditLimit;
+                    final after = balance + _creditAmount;
+                    final over =
+                        limit > 0 && after > limit + 0.005;
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: over
+                            ? AppColors.error.withValues(alpha: 0.08)
+                            : AppColors.surfaceContainer,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.radiusMd),
+                      ),
+                      child: AppText(
+                        limit > 0
+                            ? 'Saldo actual: ${Money.usd(balance)} · '
+                                'Límite: ${Money.usd(limit)} · '
+                                'Después del fiado: ${Money.usd(after)}'
+                            : 'Saldo actual: ${Money.usd(balance)} · '
+                                'Sin límite de crédito',
+                        variant: AppTextVariant.caption,
+                        color: over
+                            ? AppColors.error
+                            : AppColors.textSecondary,
+                      ),
+                    );
+                  },
+                ),
+              ],
+              if (_limitError != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                AppText(
+                  _limitError!,
+                  variant: AppTextVariant.bodySmall,
+                  color: AppColors.error,
+                ),
+              ],
             ],
           ],
         ),

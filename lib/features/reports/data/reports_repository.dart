@@ -17,7 +17,7 @@ class ReportsRepository {
         COALESCE(SUM(tax), 0) AS tax,
         COALESCE(SUM(discount), 0) AS discount
       FROM sales
-      WHERE created_at >= ? AND created_at < ?
+      WHERE created_at >= ? AND created_at < ? AND cancelled = 0
       ''',
       [start, end],
     );
@@ -35,7 +35,7 @@ class ReportsRepository {
       SELECT COALESCE(SUM(si.unit_cost * si.quantity), 0) AS cost
       FROM sale_items si
       INNER JOIN sales s ON s.id = si.sale_id
-      WHERE s.created_at >= ? AND s.created_at < ?
+      WHERE s.created_at >= ? AND s.created_at < ? AND s.cancelled = 0
       ''',
       [start, end],
     );
@@ -49,7 +49,7 @@ class ReportsRepository {
              COUNT(DISTINCT p.sale_id) AS count
       FROM payments p
       INNER JOIN sales s ON s.id = p.sale_id
-      WHERE s.created_at >= ? AND s.created_at < ?
+      WHERE s.created_at >= ? AND s.created_at < ? AND s.cancelled = 0
       GROUP BY p.method
       ORDER BY total DESC
       ''',
@@ -64,7 +64,7 @@ class ReportsRepository {
              COALESCE(SUM((si.price - si.unit_cost) * si.quantity), 0) AS profit
       FROM sale_items si
       INNER JOIN sales s ON s.id = si.sale_id
-      WHERE s.created_at >= ? AND s.created_at < ?
+      WHERE s.created_at >= ? AND s.created_at < ? AND s.cancelled = 0
       GROUP BY si.name
       ORDER BY revenue DESC
       LIMIT 10
@@ -78,7 +78,7 @@ class ReportsRepository {
              COALESCE(SUM(total), 0) AS total,
              COUNT(*) AS count
       FROM sales
-      WHERE created_at >= ? AND created_at < ?
+      WHERE created_at >= ? AND created_at < ? AND cancelled = 0
       GROUP BY day
       ORDER BY day ASC
       ''',

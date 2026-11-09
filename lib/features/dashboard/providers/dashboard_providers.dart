@@ -37,7 +37,7 @@ final dashboardProvider = FutureProvider<DashboardData>((ref) async {
     productsRepo.outOfStockCount(),
     accountsRepo.totalReceivable(),
     accountsRepo.openAccountsCount(),
-    salesRepo.list(limit: 5),
+    salesRepo.list(limit: 5, includeCancelled: false),
   ]);
 
   return DashboardData(

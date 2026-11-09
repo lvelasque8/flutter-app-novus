@@ -29,6 +29,7 @@ class AccountRepository {
     String phone = '',
     String address = '',
     String notes = '',
+    double creditLimit = 0,
   }) async {
     final normalizedName = name.trim();
     final normalizedDocument = document.trim();
@@ -45,6 +46,7 @@ class AccountRepository {
       address: address.trim(),
       notes: notes.trim(),
       createdAt: DateTime.now(),
+      creditLimit: creditLimit,
     );
     await db.insert('customers', customer.toMap());
     return customer;
@@ -100,7 +102,8 @@ class AccountRepository {
       SELECT c.*, SUM(a.total - a.paid) AS balance, COUNT(a.id) AS open_accounts
       FROM customers c
       INNER JOIN accounts a ON a.customer_id = c.id
-      WHERE a.status != 'pagada' AND (a.total - a.paid) > 0.005
+      WHERE a.status != 'pagada' AND a.cancelled = 0
+        AND (a.total - a.paid) > 0.005
       GROUP BY c.id
       ORDER BY balance DESC, c.name COLLATE NOCASE ASC
     ''');
@@ -118,11 +121,25 @@ class AccountRepository {
     final db = await AppDatabase.instance.database;
     final rows = await db.query(
       'accounts',
-      where: 'customer_id = ?',
+      where: 'customer_id = ? AND cancelled = 0',
       whereArgs: [customerId],
       orderBy: 'created_at DESC',
     );
     return rows.map(Account.fromMap).toList();
+  }
+
+  /// Saldo fiado pendiente del cliente (solo cuentas activas).
+  Future<double> balanceForCustomer(String customerId) async {
+    final db = await AppDatabase.instance.database;
+    final result = await db.rawQuery(
+      '''
+      SELECT COALESCE(SUM(total - paid), 0) AS balance
+      FROM accounts
+      WHERE customer_id = ? AND cancelled = 0 AND status != 'pagada'
+      ''',
+      [customerId],
+    );
+    return ((result.first['balance'] as num?) ?? 0).toDouble();
   }
 
   Future<List<AccountPayment>> paymentsForAccount(String accountId) async {
@@ -159,6 +176,9 @@ class AccountRepository {
       }
 
       final account = Account.fromMap(rows.first);
+      if (account.cancelled) {
+        throw Exception('Esta cuenta fue anulada');
+      }
       final newPaid =
           (account.paid + amount).clamp(0, account.total).toDouble();
       final settled = (account.total - newPaid) <= 0.005;
@@ -221,7 +241,7 @@ class AccountRepository {
     final result = await db.rawQuery('''
       SELECT COALESCE(SUM(total - paid), 0) AS total
       FROM accounts
-      WHERE status != 'pagada'
+      WHERE status != 'pagada' AND cancelled = 0
     ''');
     return ((result.first['total'] as num?) ?? 0).toDouble();
   }
@@ -229,7 +249,8 @@ class AccountRepository {
   Future<int> openAccountsCount() async {
     final db = await AppDatabase.instance.database;
     final result = await db.rawQuery(
-      "SELECT COUNT(*) AS total FROM accounts WHERE status != 'pagada'",
+      "SELECT COUNT(*) AS total FROM accounts "
+      "WHERE status != 'pagada' AND cancelled = 0",
     );
     return Sqflite.firstIntValue(result) ?? 0;
   }

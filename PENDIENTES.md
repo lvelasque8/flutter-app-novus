@@ -42,9 +42,24 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - `tools/abrir-emulador.ps1` abre `NovusTablet` y fija la ventana en
   1050×690 (ajustable con `-Ancho` y `-Alto`).
 
+### Anulación de ventas — ✅
+
+- Botón "Anular venta" en el detalle de la venta, con motivo opcional.
+- Devuelve el stock y registra el movimiento `anulacion`.
+- La venta deja de sumar en caja, reportes, inicio y cuentas por cobrar.
+- Se anula el fiado asociado. No se permite si la cuenta ya tiene abonos.
+- El historial marca la venta como "Anulada".
+
+### Límite de crédito por cliente — ✅
+
+- Campo "Límite de crédito (USD)" en el formulario de cliente.
+- El diálogo de cobro muestra saldo actual, límite y saldo después del fiado.
+- Bloquea el cobro si el fiado supera el límite (también se valida al guardar).
+- El detalle de la cuenta muestra el límite y avisa si está excedido.
+
 ## Pendiente
 
-- Anular ventas y devoluciones.
+- Devoluciones parciales (por producto).
 - Entradas y ajustes de inventario con historial.
 - Gastos del negocio y compras a proveedores.
 - Límite de crédito y vencimiento de fiados.

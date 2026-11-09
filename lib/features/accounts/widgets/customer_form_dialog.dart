@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/money.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_text_field.dart';
 import '../models/account.dart';
@@ -33,6 +35,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
   late final TextEditingController _document;
   late final TextEditingController _phone;
   late final TextEditingController _address;
+  late final TextEditingController _creditLimit;
   bool _saving = false;
   String? _errorMessage;
 
@@ -44,6 +47,11 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
         TextEditingController(text: widget.customer?.document ?? '');
     _phone = TextEditingController(text: widget.customer?.phone ?? '');
     _address = TextEditingController(text: widget.customer?.address ?? '');
+    _creditLimit = TextEditingController(
+      text: (widget.customer?.creditLimit ?? 0) > 0
+          ? widget.customer!.creditLimit.toStringAsFixed(2)
+          : '',
+    );
   }
 
   @override
@@ -52,6 +60,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
     _document.dispose();
     _phone.dispose();
     _address.dispose();
+    _creditLimit.dispose();
     super.dispose();
   }
 
@@ -69,6 +78,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
     final repo = ref.read(accountRepositoryProvider);
     try {
       Customer saved;
+      final creditLimit = Money.parse(_creditLimit.text);
       if (widget.customer != null) {
         saved = Customer(
           id: widget.customer!.id,
@@ -78,6 +88,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
           address: _address.text.trim(),
           notes: widget.customer!.notes,
           createdAt: widget.customer!.createdAt,
+          creditLimit: creditLimit,
         );
         await repo.updateCustomer(saved);
       } else {
@@ -86,6 +97,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
           document: _document.text.trim(),
           phone: _phone.text.trim(),
           address: _address.text.trim(),
+          creditLimit: creditLimit,
         );
       }
       ref.invalidate(customersProvider);
@@ -139,6 +151,18 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
                 hint: 'Opcional',
                 controller: _address,
                 textCapitalization: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AppTextField(
+                label: 'Límite de crédito (USD)',
+                hint: '0,00',
+                helperText: 'Máximo que puede deber. Deja 0 para sin límite.',
+                controller: _creditLimit,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
               ),
               if (_errorMessage != null) ...[
                 const SizedBox(height: AppSpacing.md),
