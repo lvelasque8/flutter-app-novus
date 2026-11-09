@@ -69,20 +69,30 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 7. **Inicio → Caja**: abre la caja con el fondo inicial, vende y luego ciérrala
    contando el efectivo en Bs y USD. La diferencia queda en el historial.
 8. **Inicio → Reportes**: cambia entre Hoy, 7 días, Este mes o un rango
-   personalizado. Verás ventas, ticket promedio, IVA, utilidad, formas de pago y
-   productos más vendidos.
+   personalizado. Verás el total vendido, las ventas registradas y el desglose
+   por método de pago (Punto de venta, Efectivo Bs/USD, Pago Móvil,
+   transferencia y fiado), además de los productos más vendidos.
 9. **Ajustes → Actualizar BCV**: trae la tasa oficial del día. También se
    intenta actualizar sola al abrir la app.
 10. **Ajustes → Exportar respaldo**: comparte un archivo `.db` por WhatsApp,
     Drive o correo. **Restaurar respaldo** recupera ese archivo.
+11. **Vender → ícono de escanear**: apunta al código de barras y el producto se
+    agrega al carrito.
+12. **Ajustes → Impresora térmica**: empareja la impresora desde Bluetooth de
+    Android, elígela, selecciona 58/80 mm y usa **Imprimir prueba**. Luego, al
+    cobrar, aparece **Imprimir ticket**.
 
 ## Qué funciona
 
 - Inventario con stock, stock mínimo, búsqueda y edición.
+- Carga rápida de productos: categorías sugeridas, SKU automático, aviso de
+  código de barras/SKU duplicado y **Guardar y agregar otro**.
+- Lector de código de barras con la cámara desde el POS y desde el producto.
 - Ventas con IVA configurable, descuento y doble moneda (USD/Bs).
 - Cuentas por cobrar con abonos y saldo por cliente.
 - Cierre de caja con fondo, efectivo esperado, conteo y diferencia.
-- Reportes por rango de fechas con utilidad estimada.
+- Reportes por rango de fechas con totales por método de pago.
+- Impresión de ticket en impresora térmica Bluetooth (ESC/POS, 58/80 mm).
 - Respaldo y restauración de la base.
 - Tasa BCV automática (BCV oficial, con API de respaldo).
 - Nota de entrega/recibo en PDF para imprimir o compartir.
@@ -95,10 +105,11 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 - No emite facturación fiscal (SENIAT); solo documentos no fiscales.
 - La app no tiene bloqueo por PIN ni usuarios/roles.
 - La sincronización entre varias cajas queda para una fase posterior.
-- La utilidad de los reportes usa el costo guardado al momento de la venta;
-  las ventas anteriores a esta versión pueden mostrar utilidad incompleta.
-- El APK es universal (~55 MB); se puede dividir por arquitectura para
-  reducir el tamaño.
+- No se pueden anular ventas ni hacer devoluciones todavía.
+- El lector de barras necesita permiso de cámara; la impresora debe ser
+  Bluetooth ESC/POS (no USB ni red por ahora).
+- El APK es universal (~72 MB, incluye el lector de códigos); se puede dividir
+  por arquitectura para reducir el tamaño.
 
 ## Firma de la aplicación
 

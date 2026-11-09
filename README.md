@@ -65,6 +65,16 @@ flutter pub get
 flutter run -d <id-del-dispositivo>
 ```
 
+### Emulador (Windows)
+
+Para abrir el AVD `NovusTablet` en una ventana que quepa en pantalla:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/abrir-emulador.ps1
+```
+
+Se puede ajustar el tamaño con `-Ancho 1100 -Alto 720`.
+
 ## Compilar el APK
 
 ```bash

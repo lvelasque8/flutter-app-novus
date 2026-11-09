@@ -29,6 +29,19 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Botón "Imprimir ticket" al terminar una venta y en el detalle de venta.
 - Requiere emparejar la impresora desde los ajustes de Android.
 
+### Carga rápida de productos — ✅
+
+- Chips de categorías sugeridas (Alimentos, Bebidas, Lácteos, etc.) más las
+  categorías que ya usaste.
+- SKU automático por categoría (`ALI-0001`) si se deja vacío.
+- Aviso si se repite el código de barras o el SKU.
+- Botón "Guardar y agregar otro" para cargar varios productos seguidos.
+
+### Emulador en ventana cómoda — ✅
+
+- `tools/abrir-emulador.ps1` abre `NovusTablet` y fija la ventana en
+  1050×690 (ajustable con `-Ancho` y `-Alto`).
+
 ## Pendiente
 
 - Anular ventas y devoluciones.
@@ -38,3 +51,4 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Respaldo automático.
 - PIN/usuarios y roles.
 - Impresión por USB/red (hoy solo Bluetooth).
+- Importar/exportar inventario en CSV.
