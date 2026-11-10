@@ -18,6 +18,7 @@ import '../../settings/providers/settings_providers.dart';
 import '../data/whatsapp_statement.dart';
 import '../models/account.dart';
 import '../providers/account_providers.dart';
+import '../widgets/customer_form_dialog.dart';
 
 class AccountDetailPage extends ConsumerWidget {
   const AccountDetailPage({super.key, required this.customerId});
@@ -33,6 +34,24 @@ class AccountDetailPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(customerAsync.valueOrNull?.name ?? 'Cuenta'),
         centerTitle: false,
+        actions: [
+          if (customerAsync.valueOrNull != null)
+            IconButton(
+              tooltip: 'Editar cliente',
+              onPressed: () async {
+                final updated = await showCustomerFormDialog(
+                  context,
+                  customer: customerAsync.valueOrNull,
+                );
+                if (updated != null) {
+                  ref.invalidate(customerByIdProvider(customerId));
+                  ref.invalidate(customersProvider);
+                }
+              },
+              icon: const Icon(Icons.edit_outlined),
+            ),
+          const SizedBox(width: AppSpacing.sm),
+        ],
       ),
       body: Center(
         child: ConstrainedBox(

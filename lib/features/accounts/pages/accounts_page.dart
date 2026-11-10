@@ -242,16 +242,36 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                   if (customer.phone.isNotEmpty) customer.phone,
                 ].join(' · '),
               ),
-              trailing: balance > 0
-                  ? AppBadge(
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (balance > 0)
+                    AppBadge(
                       Money.usd(balance),
                       variant: AppBadgeVariant.warning,
                     )
-                  : const AppBadge(
+                  else
+                    const AppBadge(
                       'Al día',
                       variant: AppBadgeVariant.success,
                       size: AppBadgeSize.small,
                     ),
+                  IconButton(
+                    tooltip: 'Editar cliente',
+                    onPressed: () async {
+                      final updated = await showCustomerFormDialog(
+                        context,
+                        customer: customer,
+                      );
+                      if (updated != null) {
+                        ref.invalidate(customersProvider);
+                        ref.invalidate(customerByIdProvider(customer.id));
+                      }
+                    },
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                  ),
+                ],
+              ),
               onTap: () => context.push('/cuenta/${customer.id}'),
             );
           },

@@ -67,7 +67,8 @@ adb install -r dist/Novus-1.0.0-tablet.apk
    **Enviar cuenta por WhatsApp** le mandas al cliente el saldo y el detalle
    de sus cuentas.
 6. **Cuentas → Nuevo cliente**: puedes fijar un **límite de crédito** en USD.
-   Si el cliente lo supera, la app no deja cerrar el fiado.
+   Si el cliente lo supera, la app no deja cerrar el fiado. Con el ícono de
+   lápiz editas sus datos (nombre, cédula/RIF, teléfono, dirección y límite).
 7. **Ventas → venta → Anular venta**: devuelve el stock, saca la venta de caja y
    reportes, y anula el fiado. No se permite si la cuenta ya tiene abonos.
 8. **Ventas → venta → Imprimir / compartir nota**: genera el PDF con la leyenda

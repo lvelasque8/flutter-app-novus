@@ -65,6 +65,12 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Normaliza el teléfono a formato internacional (`0412…` → `58412…`).
 - Avisa si el cliente no tiene teléfono o si WhatsApp no está instalado.
 
+### Editar datos del cliente — ✅
+
+- Ícono de lápiz en la lista de Clientes y en el detalle de la cuenta.
+- Permite cambiar nombre, cédula/RIF, teléfono, dirección y límite de crédito.
+- Mantiene la validación de cédula/RIF duplicada.
+
 ## Pendiente
 
 - Devoluciones parciales (por producto).
