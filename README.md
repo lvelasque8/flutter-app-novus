@@ -3,8 +3,8 @@
 **Control de inventario y ventas para negocios venezolanos.**
 
 Novus es una aplicación de punto de venta para una sola caja, pensada para
-funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
-(SQLite) y está preparada para agregar sincronización en una fase posterior.
+usarse en una tablet Android. Guarda todo en el dispositivo (SQLite) y está
+preparada para agregar sincronización en una fase posterior.
 
 ## Funcionalidad de esta primera versión
 
@@ -38,7 +38,7 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
 - **Respaldo y restauración**: exporta la base por el menú de compartir y
   restaura un archivo `.db` desde Ajustes.
 - **Tasa BCV automática**: consulta la tasa oficial del día al abrir la app,
-  con la API como respaldo y opción manual si no hay internet.
+  con la API como respaldo y opción manual para ajustarla.
 - **Inicio**: ventas del día, cuentas por cobrar, stock bajo y últimas ventas.
 - **Ajustes**: datos del negocio, RIF, teléfono, dirección, tasa BCV, IVA e
   impresora térmica.
@@ -46,8 +46,7 @@ funcionar en una tablet Android **sin internet**. Guarda todo en el dispositivo
 ## Cómo funciona el almacenamiento
 
 La base de datos local es la fuente de verdad. Cada venta, producto, cliente y
-abono se escribe primero en SQLite; la app no depende de Firebase ni de una
-cuenta en la nube. Los datos quedan en el dispositivo.
+abono se escribe en SQLite. Los datos quedan guardados en el dispositivo.
 
 > Importante: esta versión está pensada para **una sola tablet**. Sincronización
 > entre dispositivos y respaldo en la nube quedan para la siguiente fase; el

@@ -102,7 +102,7 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 - Tasa BCV automática (BCV oficial, con API de respaldo).
 - Nota de entrega/recibo en PDF para imprimir o compartir.
 - Inicio con ventas del día, cuentas pendientes y stock bajo.
-- Todo funciona sin internet; la tasa se actualiza cuando hay conexión.
+- Los datos quedan guardados en la tablet; la tasa se actualiza cuando hay conexión.
 
 ## Limitaciones de esta versión
 
