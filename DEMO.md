@@ -63,7 +63,9 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 4. Si usas **Fiado** (total o parcial), crea/selecciona un cliente. La parte
    fiada queda en **Cuentas**.
 5. **Cuentas → cliente → Registrar abono**: registra un pago parcial o total.
-   Para cobrar todo el saldo de una vez, usa **Saldar cuenta**.
+   Para cobrar todo el saldo de una vez, usa **Saldar cuenta**. Con
+   **Enviar cuenta por WhatsApp** le mandas al cliente el saldo y el detalle
+   de sus cuentas.
 6. **Cuentas → Nuevo cliente**: puedes fijar un **límite de crédito** en USD.
    Si el cliente lo supera, la app no deja cerrar el fiado.
 7. **Ventas → venta → Anular venta**: devuelve el stock, saca la venta de caja y

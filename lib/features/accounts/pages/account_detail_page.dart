@@ -13,6 +13,9 @@ import '../../cash/providers/cash_providers.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../../sales/models/sale.dart';
 import '../../sales/providers/sale_providers.dart';
+import '../../settings/models/business_settings.dart';
+import '../../settings/providers/settings_providers.dart';
+import '../data/whatsapp_statement.dart';
 import '../models/account.dart';
 import '../providers/account_providers.dart';
 
@@ -168,6 +171,20 @@ class AccountDetailPage extends ConsumerWidget {
                         ),
                       ),
                     ),
+                  if (customer != null) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      'Enviar cuenta por WhatsApp',
+                      variant: AppButtonVariant.secondary,
+                      icon: Icons.chat_outlined,
+                      onPressed: () => _sendWhatsApp(
+                        context,
+                        ref,
+                        customer,
+                        accounts,
+                      ),
+                    ),
+                  ],
                 ],
               );
             },
@@ -176,6 +193,51 @@ class AccountDetailPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _sendWhatsApp(
+  BuildContext context,
+  WidgetRef ref,
+  Customer customer,
+  List<Account> accounts,
+) async {
+  if (customer.phone.trim().isEmpty) {
+    _showSnack(
+      context,
+      'Agrega el teléfono del cliente para enviar por WhatsApp',
+    );
+    return;
+  }
+  if (accounts.isEmpty) {
+    _showSnack(context, 'Este cliente no tiene cuentas pendientes');
+    return;
+  }
+
+  final settings =
+      ref.read(settingsProvider).valueOrNull ?? BusinessSettings.initial();
+  final message = WhatsAppStatement.buildMessage(
+    settings: settings,
+    customer: customer,
+    accounts: accounts,
+  );
+
+  final opened = await WhatsAppStatement.open(
+    phone: customer.phone,
+    message: message,
+  );
+
+  if (!opened && context.mounted) {
+    _showSnack(
+      context,
+      'No se pudo abrir WhatsApp. Verifica que esté instalado.',
+    );
+  }
+}
+
+void _showSnack(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
 }
 
 class _MiniStat extends StatelessWidget {

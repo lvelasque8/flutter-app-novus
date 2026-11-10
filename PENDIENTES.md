@@ -57,6 +57,14 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Bloquea el cobro si el fiado supera el límite (también se valida al guardar).
 - El detalle de la cuenta muestra el límite y avisa si está excedido.
 
+### Enviar estado de cuenta por WhatsApp — ✅
+
+- Botón "Enviar cuenta por WhatsApp" en el detalle de la cuenta del cliente.
+- Abre WhatsApp con el mensaje escrito: negocio, cliente, detalle de cuentas,
+  total fiado, abonos y saldo pendiente.
+- Normaliza el teléfono a formato internacional (`0412…` → `58412…`).
+- Avisa si el cliente no tiene teléfono o si WhatsApp no está instalado.
+
 ## Pendiente
 
 - Devoluciones parciales (por producto).

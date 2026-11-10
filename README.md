@@ -24,7 +24,8 @@ preparada para agregar sincronización en una fase posterior.
   BCV configurada.
 - **Cuentas por cobrar**: fiados por cliente, saldo, historial de abonos y
   registro de pagos parciales. Incluye **Saldar cuenta** para cobrar el saldo
-  completo sin escribir el monto y **límite de crédito** por cliente.
+  completo sin escribir el monto, **límite de crédito** por cliente y
+  **envío del estado de cuenta por WhatsApp**.
 - **Notas de entrega / recibos no fiscales**: PDF imprimible o compartible con
   correlativo, datos del negocio, ítems, totales y leyenda **“Documento no
   fiscal”**.

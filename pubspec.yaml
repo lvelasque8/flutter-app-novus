@@ -67,6 +67,9 @@ dependencies:
   intl: ^0.20.2
   uuid: ^4.2.1
 
+  # Enviar estado de cuenta por WhatsApp
+  url_launcher: ^6.3.2
+
 # path_provider_android 2.3.x compila código nativo JNI que no necesitamos.
 # Esta versión usa canales de plataforma y mantiene el build simple.
 dependency_overrides:
