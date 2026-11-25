@@ -61,6 +61,7 @@ class Account {
     required this.status,
     required this.createdAt,
     this.dueDate,
+    this.lastReminderAt,
     this.cancelled = false,
   });
 
@@ -72,10 +73,42 @@ class Account {
   final String status;
   final DateTime createdAt;
   final DateTime? dueDate;
+  final DateTime? lastReminderAt;
   final bool cancelled;
 
   double get balance => (total - paid).clamp(0, double.infinity);
   bool get isPaid => status == 'pagada' || balance <= 0.005;
+
+  static DateTime _startOfDay(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
+  /// Días que faltan para el vencimiento (negativo si ya venció).
+  int? daysUntilDueAt(DateTime now) {
+    if (dueDate == null) return null;
+    return _startOfDay(dueDate!)
+        .difference(_startOfDay(now))
+        .inDays;
+  }
+
+  bool isOverdueAt(DateTime now) {
+    if (isPaid || cancelled || dueDate == null) return false;
+    return _startOfDay(dueDate!).isBefore(_startOfDay(now));
+  }
+
+  int overdueDaysAt(DateTime now) {
+    final days = daysUntilDueAt(now);
+    return days == null || days >= 0 ? 0 : -days;
+  }
+
+  bool isDueSoonAt(DateTime now) {
+    if (isPaid || cancelled || dueDate == null) return false;
+    final days = daysUntilDueAt(now);
+    return days != null && days >= 0 && days <= 3;
+  }
+
+  bool get isOverdue => isOverdueAt(DateTime.now());
+  int get overdueDays => overdueDaysAt(DateTime.now());
+  bool get isDueSoon => isDueSoonAt(DateTime.now());
 
   Map<String, Object?> toMap() {
     return {
@@ -86,6 +119,7 @@ class Account {
       'paid': paid,
       'status': status,
       'due_date': dueDate?.toIso8601String(),
+      'last_reminder_at': lastReminderAt?.toIso8601String(),
       'cancelled': cancelled ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
@@ -102,6 +136,9 @@ class Account {
       createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??
           DateTime.now(),
       dueDate: DateTime.tryParse((map['due_date'] as String?) ?? ''),
+      lastReminderAt: DateTime.tryParse(
+        (map['last_reminder_at'] as String?) ?? '',
+      ),
       cancelled: ((map['cancelled'] as num?) ?? 0) == 1,
     );
   }
@@ -157,9 +194,55 @@ class AccountSummary {
     required this.customer,
     required this.balance,
     required this.openAccounts,
+    this.nextDueDate,
+    this.overdueDays = 0,
   });
 
   final Customer customer;
   final double balance;
   final int openAccounts;
+  final DateTime? nextDueDate;
+  final int overdueDays;
+
+  bool get isOverdue => overdueDays > 0;
+}
+
+/// Cuentas abiertas de un cliente, agrupadas para la cobranza.
+class CollectionGroup {
+  const CollectionGroup({
+    required this.customer,
+    required this.accounts,
+  });
+
+  final Customer customer;
+  final List<Account> accounts;
+
+  double get balance =>
+      accounts.fold<double>(0, (sum, account) => sum + account.balance);
+
+  int get openAccounts => accounts.length;
+
+  /// Vencimiento más próximo entre las cuentas abiertas.
+  DateTime? get dueDate {
+    DateTime? earliest;
+    for (final account in accounts) {
+      final due = account.dueDate;
+      if (due == null) continue;
+      if (earliest == null || due.isBefore(earliest)) earliest = due;
+    }
+    return earliest;
+  }
+
+  bool get isOverdue => accounts.any((account) => account.isOverdue);
+
+  int get overdueDays {
+    var days = 0;
+    for (final account in accounts) {
+      final value = account.overdueDays;
+      if (value > days) days = value;
+    }
+    return days;
+  }
+
+  bool get isDueSoon => accounts.any((account) => account.isDueSoon);
 }

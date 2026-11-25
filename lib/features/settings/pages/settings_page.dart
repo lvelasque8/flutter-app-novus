@@ -10,6 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/money.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
+import '../../../shared/widgets/atoms/app_switch.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../../shared/widgets/atoms/app_text_field.dart';
 import '../../accounts/providers/account_providers.dart';
@@ -40,6 +41,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _address = TextEditingController();
   final _rate = TextEditingController();
   final _iva = TextEditingController();
+  final _payBank = TextEditingController();
+  final _payAccount = TextEditingController();
+  final _payHolder = TextEditingController();
+  final _payDocument = TextEditingController();
+  final _payMobile = TextEditingController();
+  final _payNote = TextEditingController();
+  final _dueDays = TextEditingController();
+  bool _payEnabled = false;
   bool _loaded = false;
   bool _saving = false;
   bool _updatingRate = false;
@@ -54,6 +63,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _address.dispose();
     _rate.dispose();
     _iva.dispose();
+    _payBank.dispose();
+    _payAccount.dispose();
+    _payHolder.dispose();
+    _payDocument.dispose();
+    _payMobile.dispose();
+    _payNote.dispose();
+    _dueDays.dispose();
     super.dispose();
   }
 
@@ -68,6 +84,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ? settings.rateBs.toStringAsFixed(2)
         : '';
     _iva.text = settings.ivaRate.toStringAsFixed(0);
+    _payEnabled = settings.paymentInfoEnabled;
+    _payBank.text = settings.paymentBank;
+    _payAccount.text = settings.paymentAccount;
+    _payHolder.text = settings.paymentHolder;
+    _payDocument.text = settings.paymentDocument;
+    _payMobile.text = settings.paymentMobilePhone;
+    _payNote.text = settings.paymentNote;
+    _dueDays.text = settings.creditDueDays.toString();
   }
 
   Future<void> _save(BusinessSettings current) async {
@@ -92,6 +116,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           address: _address.text.trim(),
           rateBs: rate,
           ivaRate: Money.parse(_iva.text).clamp(0, 100),
+          paymentInfoEnabled: _payEnabled,
+          paymentBank: _payBank.text.trim(),
+          paymentAccount: _payAccount.text.trim(),
+          paymentHolder: _payHolder.text.trim(),
+          paymentDocument: _payDocument.text.trim(),
+          paymentMobilePhone: _payMobile.text.trim(),
+          paymentNote: _payNote.text.trim(),
+          creditDueDays:
+              (int.tryParse(_dueDays.text.trim()) ?? 0).clamp(0, 365),
         ),
       );
       ref.invalidate(settingsProvider);
@@ -380,6 +413,129 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                               loading: _saving,
                               onPressed: _saving ? null : () => _save(value),
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppCard(
+                      padding: const EdgeInsets.all(AppSpacing.xl),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const AppText(
+                            'Cobranza y datos de pago',
+                            variant: AppTextVariant.titleLarge,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          AppSwitch(
+                            label: 'Incluir datos de pago en el estado de '
+                                'cuenta por WhatsApp',
+                            value: _payEnabled,
+                            onChanged: (value) =>
+                                setState(() => _payEnabled = value),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          AppText(
+                            _payEnabled
+                                ? 'Estos datos se agregan al final del mensaje '
+                                    'cuando envíes la cuenta o un recordatorio.'
+                                : 'Actívalo para que el cliente sepa cómo '
+                                    'pagar. No se envía nada si está apagado.',
+                            variant: AppTextVariant.caption,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppTextField(
+                                  label: 'Banco',
+                                  controller: _payBank,
+                                  enabled: _payEnabled,
+                                  textCapitalization:
+                                      TextCapitalization.words,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: AppTextField(
+                                  label: 'Número de cuenta',
+                                  controller: _payAccount,
+                                  enabled: _payEnabled,
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppTextField(
+                                  label: 'Titular de la cuenta',
+                                  controller: _payHolder,
+                                  enabled: _payEnabled,
+                                  textCapitalization:
+                                      TextCapitalization.words,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: AppTextField(
+                                  label: 'Cédula / RIF del titular',
+                                  controller: _payDocument,
+                                  enabled: _payEnabled,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppTextField(
+                                  label: 'Teléfono para Pago Móvil',
+                                  controller: _payMobile,
+                                  enabled: _payEnabled,
+                                  keyboardType: TextInputType.phone,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: AppTextField(
+                                  label: 'Nota para el cliente',
+                                  controller: _payNote,
+                                  enabled: _payEnabled,
+                                  hint: 'Ej: envía el comprobante por aquí',
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xl),
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 220,
+                                child: AppTextField(
+                                  label: 'Días de plazo para fiados',
+                                  controller: _dueDays,
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              const Expanded(
+                                child: AppText(
+                                  'Cada fiado nuevo vence en estos días. '
+                                  'Usa 0 para no poner vencimiento.',
+                                  variant: AppTextVariant.caption,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

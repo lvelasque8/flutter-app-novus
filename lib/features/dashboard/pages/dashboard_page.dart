@@ -13,6 +13,7 @@ import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
 import '../../cash/models/cash_session.dart';
 import '../../cash/providers/cash_providers.dart';
+import '../../accounts/providers/account_providers.dart';
 import '../../settings/models/business_settings.dart';
 import '../../settings/providers/settings_providers.dart';
 import '../providers/dashboard_providers.dart';
@@ -69,6 +70,18 @@ class DashboardPage extends ConsumerWidget {
             _buildHeader(context, businessName, settings.valueOrNull),
             const SizedBox(height: AppSpacing.md),
             _buildCashBanner(context, openCash.valueOrNull),
+            if (data.overdueCount > 0) ...[
+              const SizedBox(height: AppSpacing.md),
+              _CollectionBanner(
+                count: data.overdueCount,
+                amount: data.overdueAmount,
+                dueSoon: data.dueSoonCount,
+                onTap: () {
+                  ref.read(accountsTabProvider.notifier).state = 2;
+                  onAccounts?.call();
+                },
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             LayoutBuilder(
               builder: (context, constraints) {
@@ -103,11 +116,13 @@ class DashboardPage extends ConsumerWidget {
                       child: _StatCard(
                         title: 'Cuentas por cobrar',
                         value: Money.usd(data.receivable),
-                        subtitle: TextoPlural.de(
-                          data.openAccounts,
-                          'cuenta abierta',
-                          'cuentas abiertas',
-                        ),
+                        subtitle: data.overdueCount > 0
+                            ? '${data.overdueCount} vencidas'
+                            : TextoPlural.de(
+                                data.openAccounts,
+                                'cuenta abierta',
+                                'cuentas abiertas',
+                              ),
                         icon: Icons.receipt_long_outlined,
                         color: AppColors.tertiary,
                         onTap: onAccounts,
@@ -314,6 +329,76 @@ class DashboardPage extends ConsumerWidget {
                 ),
               ),
               Icon(Icons.chevron_right, color: foreground),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectionBanner extends StatelessWidget {
+  const _CollectionBanner({
+    required this.count,
+    required this.amount,
+    required this.dueSoon,
+    required this.onTap,
+  });
+
+  final int count;
+  final double amount;
+  final int dueSoon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.errorContainer,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.notifications_active_outlined,
+                color: AppColors.onErrorContainer,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      count == 1
+                          ? '1 cuenta vencida'
+                          : '$count cuentas vencidas',
+                      variant: AppTextVariant.titleSmall,
+                      color: AppColors.onErrorContainer,
+                    ),
+                    AppText(
+                      '${Money.usd(amount)} por cobrar'
+                      '${dueSoon > 0 ? ' · $dueSoon por vencer' : ''}',
+                      variant: AppTextVariant.caption,
+                      color: AppColors.onErrorContainer,
+                    ),
+                  ],
+                ),
+              ),
+              AppText(
+                'Cobrar',
+                variant: AppTextVariant.labelMedium,
+                color: AppColors.onErrorContainer,
+              ),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.onErrorContainer,
+              ),
             ],
           ),
         ),

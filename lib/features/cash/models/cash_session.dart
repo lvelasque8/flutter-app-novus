@@ -81,6 +81,9 @@ class CashSessionSummary {
     required this.abonosByMethod,
     required this.expectedBs,
     required this.expectedUsd,
+    this.returnsByMethod = const {},
+    this.returnsTotalUsd = 0,
+    this.returnsTotalBs = 0,
   });
 
   final CashSession session;
@@ -95,6 +98,12 @@ class CashSessionSummary {
 
   /// Abonos en dólares por forma de pago.
   final Map<String, double> abonosByMethod;
+
+  /// Devoluciones del turno en dólares por forma de pago.
+  final Map<String, double> returnsByMethod;
+
+  final double returnsTotalUsd;
+  final double returnsTotalBs;
 
   final double expectedBs;
   final double expectedUsd;

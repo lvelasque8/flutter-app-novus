@@ -200,6 +200,16 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     color: AppColors.secondary,
                   ),
                 ),
+                if (summary.refunded > 0.005)
+                  SizedBox(
+                    width: width,
+                    child: _SummaryCard(
+                      label: 'Devoluciones',
+                      value: '-${Money.usd(summary.refunded)}',
+                      detail: 'Ya restadas de las ventas',
+                      color: AppColors.error,
+                    ),
+                  ),
               ],
             );
           },

@@ -187,21 +187,39 @@ class AccountDetailPage extends ConsumerWidget {
                         child: _AccountCard(
                           account: account,
                           customerId: customerId,
+                          customer: customer,
                         ),
                       ),
                     ),
                   if (customer != null) ...[
                     const SizedBox(height: AppSpacing.lg),
-                    AppButton(
-                      'Enviar cuenta por WhatsApp',
-                      variant: AppButtonVariant.secondary,
-                      icon: Icons.chat_outlined,
-                      onPressed: () => _sendWhatsApp(
-                        context,
-                        ref,
-                        customer,
-                        accounts,
-                      ),
+                    Wrap(
+                      spacing: AppSpacing.md,
+                      runSpacing: AppSpacing.md,
+                      children: [
+                        AppButton(
+                          'Enviar cuenta por WhatsApp',
+                          variant: AppButtonVariant.secondary,
+                          icon: Icons.chat_outlined,
+                          onPressed: () => _sendWhatsApp(
+                            context,
+                            ref,
+                            customer,
+                            accounts,
+                          ),
+                        ),
+                        AppButton(
+                          'Enviar recordatorio',
+                          variant: AppButtonVariant.secondary,
+                          icon: Icons.notifications_active_outlined,
+                          onPressed: () => _sendReminder(
+                            context,
+                            ref,
+                            customer,
+                            accounts,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ],
@@ -259,6 +277,61 @@ void _showSnack(BuildContext context, String message) {
   );
 }
 
+Future<void> _sendReminder(
+  BuildContext context,
+  WidgetRef ref,
+  Customer customer,
+  List<Account> accounts,
+) async {
+  if (customer.phone.trim().isEmpty) {
+    _showSnack(
+      context,
+      'Agrega el teléfono del cliente para enviar el recordatorio',
+    );
+    return;
+  }
+  final open =
+      accounts.where((account) => !account.isPaid && account.balance > 0.005)
+          .toList();
+  if (open.isEmpty) {
+    _showSnack(context, 'Este cliente no tiene saldo pendiente');
+    return;
+  }
+
+  final settings =
+      ref.read(settingsProvider).valueOrNull ?? BusinessSettings.initial();
+  final message = WhatsAppStatement.buildReminder(
+    settings: settings,
+    customer: customer,
+    accounts: open,
+  );
+
+  final opened = await WhatsAppStatement.open(
+    phone: customer.phone,
+    message: message,
+  );
+  if (!opened) {
+    if (context.mounted) {
+      _showSnack(
+        context,
+        'No se pudo abrir WhatsApp. Verifica que esté instalado.',
+      );
+    }
+    return;
+  }
+
+  final repository = ref.read(accountRepositoryProvider);
+  for (final account in open) {
+    await repository.markReminder(account.id);
+  }
+  ref.invalidate(customerAccountsProvider(customer.id));
+  ref.invalidate(collectionProvider);
+  ref.invalidate(dashboardProvider);
+  if (context.mounted) {
+    _showSnack(context, 'Recordatorio preparado para ${customer.name}');
+  }
+}
+
 class _MiniStat extends StatelessWidget {
   const _MiniStat({
     required this.label,
@@ -292,14 +365,35 @@ class _MiniStat extends StatelessWidget {
 }
 
 class _AccountCard extends ConsumerWidget {
-  const _AccountCard({required this.account, required this.customerId});
+  const _AccountCard({
+    required this.account,
+    required this.customerId,
+    required this.customer,
+  });
 
   final Account account;
   final String customerId;
+  final Customer? customer;
+
+  String? get _dueText {
+    final due = account.dueDate;
+    if (due == null) return null;
+    if (account.isOverdue) {
+      final days = account.overdueDays;
+      return 'Vencida hace $days ${days == 1 ? 'día' : 'días'}';
+    }
+    final now = DateTime.now();
+    final days = DateTime(due.year, due.month, due.day)
+        .difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+    if (days == 0) return 'Vence hoy';
+    return 'Vence el ${Money.date(due)}';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final payments = ref.watch(accountPaymentsProvider(account.id));
+    final dueText = _dueText;
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -323,16 +417,30 @@ class _AccountCard extends ConsumerWidget {
                       variant: AppTextVariant.caption,
                       color: AppColors.textSecondary,
                     ),
+                    if (dueText != null) ...[
+                      const SizedBox(height: 2),
+                      AppText(
+                        dueText,
+                        variant: AppTextVariant.caption,
+                        color: account.isOverdue
+                            ? AppColors.error
+                            : AppColors.textSecondary,
+                      ),
+                    ],
                   ],
                 ),
               ),
               AppBadge(
                 account.isPaid
                     ? 'Pagada'
-                    : 'Saldo ${Money.usd(account.balance)}',
+                    : account.isOverdue
+                        ? 'Vencida'
+                        : 'Saldo ${Money.usd(account.balance)}',
                 variant: account.isPaid
                     ? AppBadgeVariant.success
-                    : AppBadgeVariant.warning,
+                    : account.isOverdue
+                        ? AppBadgeVariant.error
+                        : AppBadgeVariant.warning,
                 size: AppBadgeSize.small,
               ),
             ],
@@ -357,6 +465,18 @@ class _AccountCard extends ConsumerWidget {
                   size: AppButtonSize.small,
                   onPressed: () => _showAbono(context, ref, full: true),
                 ),
+              TextButton.icon(
+                onPressed: () => _changeDueDate(context, ref),
+                icon: const Icon(Icons.event_outlined, size: 18),
+                label: Text(
+                  account.dueDate == null ? 'Poner vencimiento' : 'Vencimiento',
+                ),
+              ),
+              if (account.dueDate != null)
+                TextButton(
+                  onPressed: () => _clearDueDate(ref),
+                  child: const Text('Quitar'),
+                ),
               TextButton(
                 onPressed: () => _showPayments(context, payments.valueOrNull),
                 child: const Text('Ver abonos'),
@@ -366,6 +486,37 @@ class _AccountCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _changeDueDate(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: account.dueDate ?? now.add(const Duration(days: 15)),
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 2),
+      helpText: 'Vencimiento de la cuenta',
+      cancelText: 'Cancelar',
+      confirmText: 'Guardar',
+    );
+    if (picked == null) return;
+
+    await ref
+        .read(accountRepositoryProvider)
+        .updateDueDate(account.id, picked);
+    _refresh(ref);
+  }
+
+  Future<void> _clearDueDate(WidgetRef ref) async {
+    await ref.read(accountRepositoryProvider).updateDueDate(account.id, null);
+    _refresh(ref);
+  }
+
+  void _refresh(WidgetRef ref) {
+    ref.invalidate(customerAccountsProvider(customerId));
+    ref.invalidate(accountsProvider);
+    ref.invalidate(collectionProvider);
+    ref.invalidate(dashboardProvider);
   }
 
   Future<void> _showAbono(
@@ -392,6 +543,7 @@ class _AccountCard extends ConsumerWidget {
       ref.invalidate(accountsProvider);
       ref.invalidate(customerAccountsProvider(customerId));
       ref.invalidate(accountPaymentsProvider(account.id));
+      ref.invalidate(collectionProvider);
       ref.invalidate(receivableTotalProvider);
       ref.invalidate(openAccountsCountProvider);
       ref.invalidate(dashboardProvider);

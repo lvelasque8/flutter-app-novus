@@ -55,6 +55,7 @@ class ReportSummary {
     required this.tax,
     required this.discount,
     required this.cost,
+    this.refunded = 0,
   });
 
   final int salesCount;
@@ -64,6 +65,9 @@ class ReportSummary {
   final double tax;
   final double discount;
   final double cost;
+
+  /// Devoluciones del período (ya restadas de [totalUsd]).
+  final double refunded;
 
   double get profit => subtotal - discount - cost;
   double get averageTicket =>

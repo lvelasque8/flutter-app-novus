@@ -57,8 +57,8 @@ class CashRepository {
         COALESCE(SUM(subtotal), 0) AS subtotal,
         COALESCE(SUM(tax), 0) AS tax,
         COALESCE(SUM(discount), 0) AS discount,
-        COALESCE(SUM(total), 0) AS total,
-        COALESCE(SUM(total_bs), 0) AS total_bs
+        COALESCE(SUM(total - refunded), 0) AS total,
+        COALESCE(SUM(total_bs - refunded_bs), 0) AS total_bs
       FROM sales
       WHERE cash_session_id = ? AND cancelled = 0
       ''',
@@ -94,15 +94,43 @@ class CashRepository {
           ((methodRow['total_bs'] as num?) ?? 0).toDouble();
     }
 
+    final returnsByMethod = <String, double>{};
+    final returnsBsByMethod = <String, double>{};
+    final returnRows = await db.rawQuery(
+      '''
+      SELECT method,
+             COALESCE(SUM(total), 0) AS total,
+             COALESCE(SUM(total_bs), 0) AS total_bs
+      FROM sale_returns
+      WHERE cash_session_id = ? AND method != ?
+      GROUP BY method
+      ''',
+      [session.id, PaymentMethods.devolucion],
+    );
+    var returnsTotalUsd = 0.0;
+    var returnsTotalBs = 0.0;
+    for (final methodRow in returnRows) {
+      final method = methodRow['method'] as String;
+      final returned = ((methodRow['total'] as num?) ?? 0).toDouble();
+      final returnedBs = ((methodRow['total_bs'] as num?) ?? 0).toDouble();
+      returnsByMethod[method] = returned;
+      returnsBsByMethod[method] = returnedBs;
+      returnsTotalUsd += returned;
+      returnsTotalBs += returnedBs;
+      salesByMethod[method] = (salesByMethod[method] ?? 0) - returned;
+      salesBsByMethod[method] =
+          (salesBsByMethod[method] ?? 0) - returnedBs;
+    }
+
     final abonosByMethod = <String, double>{};
     final abonoRows = await db.rawQuery(
       '''
       SELECT method, COALESCE(SUM(amount), 0) AS total
       FROM account_payments
-      WHERE cash_session_id = ?
+      WHERE cash_session_id = ? AND method != ?
       GROUP BY method
       ''',
-      [session.id],
+      [session.id, PaymentMethods.devolucion],
     );
     for (final methodRow in abonoRows) {
       abonosByMethod[methodRow['method'] as String] =
@@ -133,6 +161,9 @@ class CashRepository {
       salesDiscount: discount,
       salesByMethod: salesByMethod,
       abonosByMethod: abonosByMethod,
+      returnsByMethod: returnsByMethod,
+      returnsTotalUsd: returnsTotalUsd,
+      returnsTotalBs: returnsTotalBs,
       expectedBs: session.openingBs + cashSalesBs + cashAbonosBs,
       expectedUsd: session.openingUsd + cashSalesUsd + cashAbonosUsd,
     );

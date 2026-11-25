@@ -13,6 +13,14 @@ final accountsProvider = FutureProvider<List<AccountSummary>>((ref) {
   return ref.watch(accountRepositoryProvider).listSummaries();
 });
 
+/// Pestaña activa de la pantalla de cuentas (0 por cobrar, 1 clientes,
+/// 2 cobranza). Se usa para abrir la cobranza desde el inicio.
+final accountsTabProvider = StateProvider<int>((ref) => 0);
+
+final collectionProvider = FutureProvider<List<CollectionGroup>>((ref) {
+  return ref.watch(accountRepositoryProvider).listCollection();
+});
+
 final customersProvider = FutureProvider<List<Customer>>((ref) {
   return ref.watch(accountRepositoryProvider).listCustomers();
 });

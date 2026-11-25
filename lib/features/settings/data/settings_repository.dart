@@ -21,6 +21,15 @@ class SettingsRepository {
       rateUpdatedAt: DateTime.tryParse(values['rate_updated_at'] ?? ''),
       rateSource: values['rate_source'] ?? '',
       lastBackupAt: DateTime.tryParse(values['last_backup_at'] ?? ''),
+      paymentInfoEnabled: values['payment_info_enabled'] == '1',
+      paymentBank: values['payment_bank'] ?? '',
+      paymentAccount: values['payment_account'] ?? '',
+      paymentHolder: values['payment_holder'] ?? '',
+      paymentDocument: values['payment_document'] ?? '',
+      paymentMobilePhone: values['payment_mobile_phone'] ?? '',
+      paymentNote: values['payment_note'] ?? '',
+      creditDueDays:
+          int.tryParse(values['credit_due_days'] ?? '') ?? 15,
     );
   }
 
@@ -38,6 +47,14 @@ class SettingsRepository {
       'rate_source': settings.rateSource,
       'last_backup_at':
           settings.lastBackupAt?.toIso8601String() ?? '',
+      'payment_info_enabled': settings.paymentInfoEnabled ? '1' : '0',
+      'payment_bank': settings.paymentBank,
+      'payment_account': settings.paymentAccount,
+      'payment_holder': settings.paymentHolder,
+      'payment_document': settings.paymentDocument,
+      'payment_mobile_phone': settings.paymentMobilePhone,
+      'payment_note': settings.paymentNote,
+      'credit_due_days': settings.creditDueDays.toString(),
     });
   }
 

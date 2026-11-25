@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../accounts/models/account.dart';
 import '../models/sale.dart';
 
 class SaleLineInput {
@@ -36,8 +37,32 @@ class PaymentInput {
   final String? reference;
 }
 
+class ReturnLineInput {
+  const ReturnLineInput({
+    required this.saleItemId,
+    required this.quantity,
+  });
+
+  final String saleItemId;
+  final int quantity;
+}
+
 class SaleRepository {
   static const _uuid = Uuid();
+
+  /// Parte proporcional del total de la venta que corresponde a una línea.
+  ///
+  /// Incluye IVA y descuento para que la devolución cuadre con lo cobrado.
+  static double refundForLine({
+    required double price,
+    required int quantity,
+    required double saleSubtotal,
+    required double saleTotal,
+  }) {
+    if (saleSubtotal <= 0 || quantity <= 0) return 0;
+    final value = price * quantity * (saleTotal / saleSubtotal);
+    return (value * 100).round() / 100;
+  }
 
   Future<Sale> createSale({
     required List<SaleLineInput> lines,
@@ -254,6 +279,23 @@ class SaleRepository {
       }
 
       if (credit > 0) {
+        final dueDaysRows = await txn.query(
+          'settings',
+          columns: ['value'],
+          where: 'key = ?',
+          whereArgs: ['credit_due_days'],
+          limit: 1,
+        );
+        final dueDays = dueDaysRows.isEmpty
+            ? 15
+            : int.tryParse(
+                  (dueDaysRows.first['value'] as String?) ?? '',
+                ) ??
+                15;
+        final dueDate = dueDays > 0
+            ? now.add(Duration(days: dueDays))
+            : null;
+
         await txn.insert('accounts', {
           'id': _uuid.v4(),
           'customer_id': customerId,
@@ -261,6 +303,7 @@ class SaleRepository {
           'total': credit,
           'paid': 0,
           'status': 'pendiente',
+          'due_date': dueDate?.toIso8601String(),
           'created_at': now.toIso8601String(),
         });
       }
@@ -325,10 +368,32 @@ class SaleRepository {
       orderBy: 'created_at ASC',
     );
 
+    final returnRows = await db.query(
+      'sale_returns',
+      where: 'sale_id = ?',
+      whereArgs: [id],
+      orderBy: 'created_at ASC',
+    );
+    final returns = <SaleReturn>[];
+    for (final returnRow in returnRows) {
+      final returnItemRows = await db.query(
+        'sale_return_items',
+        where: 'return_id = ?',
+        whereArgs: [returnRow['id']],
+      );
+      returns.add(
+        SaleReturn.fromMap(
+          returnRow,
+          items: returnItemRows.map(SaleReturnItem.fromMap).toList(),
+        ),
+      );
+    }
+
     return Sale.fromMap(
       rows.first,
       items: itemRows.map(SaleItem.fromMap).toList(),
       payments: paymentRows.map(SalePayment.fromMap).toList(),
+      returns: returns,
     );
   }
 
@@ -349,7 +414,7 @@ class SaleRepository {
     final start = DateTime.now();
     final startOfDay = DateTime(start.year, start.month, start.day);
     final result = await db.rawQuery(
-      'SELECT COALESCE(SUM(total), 0) AS total FROM sales '
+      'SELECT COALESCE(SUM(total - refunded), 0) AS total FROM sales '
       'WHERE created_at >= ? AND cancelled = 0',
       [startOfDay.toIso8601String()],
     );
@@ -366,6 +431,265 @@ class SaleRepository {
       [startOfDay.toIso8601String()],
     );
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  /// Devuelve productos de una venta (parcial o total).
+  ///
+  /// Restaura el stock, registra el movimiento y guarda la devolución. Si la
+  /// venta es un fiado con saldo, la devolución se abona a la cuenta.
+  Future<SaleReturn> returnItems({
+    required String saleId,
+    required List<ReturnLineInput> lines,
+    required String method,
+    String reason = '',
+  }) async {
+    final selected = lines.where((line) => line.quantity > 0).toList();
+    if (selected.isEmpty) {
+      throw Exception('Selecciona al menos un producto para devolver');
+    }
+
+    final db = await AppDatabase.instance.database;
+    final now = DateTime.now();
+    late SaleReturn created;
+
+    await db.transaction((txn) async {
+      final saleRows = await txn.query(
+        'sales',
+        where: 'id = ?',
+        whereArgs: [saleId],
+        limit: 1,
+      );
+      if (saleRows.isEmpty) throw Exception('Venta no encontrada');
+
+      final sale = Sale.fromMap(saleRows.first);
+      if (sale.cancelled) {
+        throw Exception('Esta venta está anulada');
+      }
+
+      final itemRows = await txn.query(
+        'sale_items',
+        where: 'sale_id = ?',
+        whereArgs: [saleId],
+      );
+      final itemsById = <String, Map<String, Object?>>{
+        for (final row in itemRows) (row['id'] as String): row,
+      };
+
+      final returnedRows = await txn.rawQuery(
+        '''
+        SELECT sri.sale_item_id AS sale_item_id,
+               COALESCE(SUM(sri.quantity), 0) AS qty
+        FROM sale_return_items sri
+        INNER JOIN sale_returns sr ON sr.id = sri.return_id
+        WHERE sr.sale_id = ?
+        GROUP BY sri.sale_item_id
+        ''',
+        [saleId],
+      );
+      final returned = <String, int>{
+        for (final row in returnedRows)
+          (row['sale_item_id'] as String):
+              ((row['qty'] as num?) ?? 0).toInt(),
+      };
+
+      final accountRows = await txn.query(
+        'accounts',
+        where: 'sale_id = ?',
+        whereArgs: [saleId],
+        limit: 1,
+      );
+      Account? account;
+      if (accountRows.isNotEmpty) {
+        final candidate = Account.fromMap(accountRows.first);
+        if (!candidate.cancelled) account = candidate;
+      }
+      final useAccount = account != null && account.balance > 0.005;
+
+      final computed = <_ReturnComputation>[];
+      var total = 0.0;
+      for (final line in selected) {
+        final row = itemsById[line.saleItemId];
+        if (row == null) {
+          throw Exception('Producto de la venta no encontrado');
+        }
+        final sold = ((row['quantity'] as num?) ?? 0).toInt();
+        final already = returned[line.saleItemId] ?? 0;
+        final available = sold - already;
+        if (line.quantity > available) {
+          throw Exception(
+            'Solo puedes devolver $available de ${row['name']}',
+          );
+        }
+
+        final refund = refundForLine(
+          price: ((row['price'] as num?) ?? 0).toDouble(),
+          quantity: line.quantity,
+          saleSubtotal: sale.subtotal,
+          saleTotal: sale.total,
+        );
+        computed.add(
+          _ReturnComputation(
+            saleItemId: line.saleItemId,
+            productId: row['product_id'] as String?,
+            name: (row['name'] as String?) ?? '',
+            price: ((row['price'] as num?) ?? 0).toDouble(),
+            quantity: line.quantity,
+            refund: refund,
+          ),
+        );
+        total += refund;
+      }
+      total = (total * 100).round() / 100;
+
+      final remainingRefund = (sale.total - sale.refunded).clamp(
+        0,
+        double.infinity,
+      );
+      if (total > remainingRefund + 0.01) {
+        throw Exception(
+          'La devolución supera lo que queda de la venta '
+          '(${remainingRefund.toStringAsFixed(2)} USD)',
+        );
+      }
+      if (useAccount && total > account.balance + 0.01) {
+        throw Exception(
+          'En un fiado solo puedes devolver hasta el saldo pendiente de la '
+          'cuenta (${account.balance.toStringAsFixed(2)} USD).',
+        );
+      }
+
+      final effectiveMethod = useAccount
+          ? PaymentMethods.devolucion
+          : (method.trim().isEmpty
+                ? PaymentMethods.efectivoUsd
+                : method.trim());
+      final rate = sale.rate;
+      final totalBs = total * rate;
+
+      final sessionRows = await txn.query(
+        'cash_sessions',
+        columns: ['id'],
+        where: "status = 'abierta'",
+        orderBy: 'opened_at DESC',
+        limit: 1,
+      );
+      final cashSessionId =
+          sessionRows.isEmpty ? null : sessionRows.first['id'] as String;
+
+      final returnId = _uuid.v4();
+      await txn.insert('sale_returns', {
+        'id': returnId,
+        'sale_id': saleId,
+        'method': effectiveMethod,
+        'total': total,
+        'total_bs': totalBs,
+        'rate': rate,
+        'reason': reason.trim().isEmpty ? null : reason.trim(),
+        'cash_session_id': cashSessionId,
+        'created_at': now.toIso8601String(),
+      });
+
+      final createdItems = <SaleReturnItem>[];
+      for (final entry in computed) {
+        final itemId = _uuid.v4();
+        await txn.insert('sale_return_items', {
+          'id': itemId,
+          'return_id': returnId,
+          'sale_item_id': entry.saleItemId,
+          'product_id': entry.productId,
+          'name': entry.name,
+          'price': entry.price,
+          'quantity': entry.quantity,
+          'subtotal': entry.refund,
+        });
+        createdItems.add(
+          SaleReturnItem(
+            id: itemId,
+            returnId: returnId,
+            saleItemId: entry.saleItemId,
+            productId: entry.productId,
+            name: entry.name,
+            price: entry.price,
+            quantity: entry.quantity,
+            subtotal: entry.refund,
+          ),
+        );
+
+        final productId = entry.productId;
+        if (productId != null && productId.isNotEmpty) {
+          await txn.rawUpdate(
+            'UPDATE products SET stock = stock + ?, updated_at = ? '
+            'WHERE id = ?',
+            [entry.quantity, now.toIso8601String(), productId],
+          );
+          await txn.insert('inventory_movements', {
+            'id': _uuid.v4(),
+            'product_id': productId,
+            'type': 'devolucion',
+            'quantity': entry.quantity,
+            'reference': 'Devolución ${sale.number}',
+            'created_at': now.toIso8601String(),
+          });
+        }
+      }
+
+      await txn.rawUpdate(
+        'UPDATE sales SET refunded = refunded + ?, '
+        'refunded_bs = refunded_bs + ? WHERE id = ?',
+        [total, totalBs, saleId],
+      );
+
+      if (useAccount) {
+        final newPaid = (account.paid + total)
+            .clamp(0, account.total)
+            .toDouble();
+        final settled = account.total - newPaid <= 0.005;
+
+        await txn.insert('account_payments', {
+          'id': _uuid.v4(),
+          'account_id': account.id,
+          'amount': total,
+          'amount_bs': totalBs,
+          'method': PaymentMethods.devolucion,
+          'note': 'Devolución ${sale.number}',
+          'cash_session_id': cashSessionId,
+          'created_at': now.toIso8601String(),
+        });
+
+        await txn.update(
+          'accounts',
+          {
+            'paid': newPaid,
+            'status': settled ? 'pagada' : 'pendiente',
+          },
+          where: 'id = ?',
+          whereArgs: [account.id],
+        );
+
+        if (settled) {
+          await txn.update(
+            'sales',
+            {'status': 'pagada'},
+            where: 'id = ?',
+            whereArgs: [saleId],
+          );
+        }
+      }
+
+      created = SaleReturn(
+        id: returnId,
+        saleId: saleId,
+        method: effectiveMethod,
+        total: total,
+        totalBs: totalBs,
+        rate: rate,
+        reason: reason.trim().isEmpty ? null : reason.trim(),
+        createdAt: now,
+        items: createdItems,
+      );
+    });
+
+    return created;
   }
 
   /// Anula una venta: devuelve el stock, marca la venta y anula su fiado.
@@ -389,6 +713,11 @@ class SaleRepository {
       final sale = Sale.fromMap(rows.first);
       if (sale.cancelled) {
         throw Exception('Esta venta ya está anulada');
+      }
+      if (sale.refunded > 0.005) {
+        throw Exception(
+          'La venta tiene devoluciones registradas. No se puede anular.',
+        );
       }
 
       final accountRows = await txn.query(
@@ -456,4 +785,22 @@ class SaleRepository {
       );
     });
   }
+}
+
+class _ReturnComputation {
+  const _ReturnComputation({
+    required this.saleItemId,
+    required this.productId,
+    required this.name,
+    required this.price,
+    required this.quantity,
+    required this.refund,
+  });
+
+  final String saleItemId;
+  final String? productId;
+  final String name;
+  final double price;
+  final int quantity;
+  final double refund;
 }

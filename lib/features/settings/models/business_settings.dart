@@ -10,6 +10,14 @@ class BusinessSettings {
     this.rateUpdatedAt,
     this.rateSource = '',
     this.lastBackupAt,
+    this.paymentInfoEnabled = false,
+    this.paymentBank = '',
+    this.paymentAccount = '',
+    this.paymentHolder = '',
+    this.paymentDocument = '',
+    this.paymentMobilePhone = '',
+    this.paymentNote = '',
+    this.creditDueDays = 15,
   });
 
   final String businessName;
@@ -33,6 +41,19 @@ class BusinessSettings {
 
   final DateTime? lastBackupAt;
 
+  /// Si se incluyen los datos de pago en el estado de cuenta de WhatsApp.
+  final bool paymentInfoEnabled;
+
+  final String paymentBank;
+  final String paymentAccount;
+  final String paymentHolder;
+  final String paymentDocument;
+  final String paymentMobilePhone;
+  final String paymentNote;
+
+  /// Días de plazo para los fiados. `0` significa sin vencimiento.
+  final int creditDueDays;
+
   factory BusinessSettings.initial() {
     return const BusinessSettings(
       businessName: 'Mi negocio',
@@ -47,6 +68,14 @@ class BusinessSettings {
 
   bool get hasRate => rateBs > 0;
 
+  bool get hasPaymentInfo =>
+      paymentBank.trim().isNotEmpty ||
+      paymentAccount.trim().isNotEmpty ||
+      paymentHolder.trim().isNotEmpty ||
+      paymentDocument.trim().isNotEmpty ||
+      paymentMobilePhone.trim().isNotEmpty ||
+      paymentNote.trim().isNotEmpty;
+
   BusinessSettings copyWith({
     String? businessName,
     String? rif,
@@ -58,6 +87,14 @@ class BusinessSettings {
     DateTime? rateUpdatedAt,
     String? rateSource,
     DateTime? lastBackupAt,
+    bool? paymentInfoEnabled,
+    String? paymentBank,
+    String? paymentAccount,
+    String? paymentHolder,
+    String? paymentDocument,
+    String? paymentMobilePhone,
+    String? paymentNote,
+    int? creditDueDays,
     bool clearRateUpdatedAt = false,
     bool clearLastBackupAt = false,
   }) {
@@ -74,6 +111,15 @@ class BusinessSettings {
       rateSource: rateSource ?? this.rateSource,
       lastBackupAt:
           clearLastBackupAt ? null : (lastBackupAt ?? this.lastBackupAt),
+      paymentInfoEnabled:
+          paymentInfoEnabled ?? this.paymentInfoEnabled,
+      paymentBank: paymentBank ?? this.paymentBank,
+      paymentAccount: paymentAccount ?? this.paymentAccount,
+      paymentHolder: paymentHolder ?? this.paymentHolder,
+      paymentDocument: paymentDocument ?? this.paymentDocument,
+      paymentMobilePhone: paymentMobilePhone ?? this.paymentMobilePhone,
+      paymentNote: paymentNote ?? this.paymentNote,
+      creditDueDays: creditDueDays ?? this.creditDueDays,
     );
   }
 }

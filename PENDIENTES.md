@@ -71,12 +71,36 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Permite cambiar nombre, cédula/RIF, teléfono, dirección y límite de crédito.
 - Mantiene la validación de cédula/RIF duplicada.
 
+### Datos de pago en WhatsApp — ✅
+
+- Interruptor "Mostrar datos de pago" en Ajustes → Cobranza y datos de pago.
+- Campos: banco, cuenta, titular, cédula/RIF, teléfono de Pago Móvil y nota.
+- Solo se agregan al estado de cuenta y al recordatorio si el interruptor está
+  activo y hay al menos un dato cargado.
+
+### Vencimiento de fiados y cobranza — ✅
+
+- Plazo configurable en días (`0` = sin vencimiento). Se guarda por cuenta.
+- Pestaña **Cobranza** con vencidas y por vencer, monto total y días de atraso.
+- Recordatorio por WhatsApp con un toque y marca de último recordatorio.
+- El inicio avisa cuando hay cuentas vencidas.
+- Se puede cambiar o quitar el vencimiento desde el detalle de la cuenta.
+
+### Devoluciones parciales por producto — ✅
+
+- Botón "Devolver productos" en el detalle de la venta.
+- Devuelve el importe proporcional (con IVA y descuento) de cada línea.
+- Repone el stock y registra el movimiento `devolucion`.
+- En fiados se abona a la cuenta; en ventas pagadas se elige la forma de
+  reembolso.
+- Reportes y caja restan las devoluciones; el historial marca la venta.
+- No se puede anular una venta con devoluciones registradas.
+
 ## Pendiente
 
-- Devoluciones parciales (por producto).
 - Entradas y ajustes de inventario con historial.
 - Gastos del negocio y compras a proveedores.
-- Límite de crédito y vencimiento de fiados.
+- Notificaciones de cobranza en segundo plano.
 - Respaldo automático.
 - PIN/usuarios y roles.
 - Impresión por USB/red (hoy solo Bluetooth).

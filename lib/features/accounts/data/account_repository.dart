@@ -99,7 +99,9 @@ class AccountRepository {
   Future<List<AccountSummary>> listSummaries() async {
     final db = await AppDatabase.instance.database;
     final rows = await db.rawQuery('''
-      SELECT c.*, SUM(a.total - a.paid) AS balance, COUNT(a.id) AS open_accounts
+      SELECT c.*, SUM(a.total - a.paid) AS balance,
+             COUNT(a.id) AS open_accounts,
+             MIN(a.due_date) AS next_due
       FROM customers c
       INNER JOIN accounts a ON a.customer_id = c.id
       WHERE a.status != 'pagada' AND a.cancelled = 0
@@ -108,13 +110,95 @@ class AccountRepository {
       ORDER BY balance DESC, c.name COLLATE NOCASE ASC
     ''');
 
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day);
+
     return rows.map((row) {
+      final due = DateTime.tryParse((row['next_due'] as String?) ?? '');
+      var overdueDays = 0;
+      if (due != null) {
+        final diff = start
+            .difference(DateTime(due.year, due.month, due.day))
+            .inDays;
+        if (diff > 0) overdueDays = diff;
+      }
       return AccountSummary(
         customer: Customer.fromMap(row),
         balance: ((row['balance'] as num?) ?? 0).toDouble(),
         openAccounts: ((row['open_accounts'] as num?) ?? 0).toInt(),
+        nextDueDate: due,
+        overdueDays: overdueDays,
       );
     }).toList();
+  }
+
+  /// Cuentas abiertas agrupadas por cliente, ordenadas para cobranza.
+  Future<List<CollectionGroup>> listCollection() async {
+    final db = await AppDatabase.instance.database;
+    final accountRows = await db.query(
+      'accounts',
+      where: "status != 'pagada' AND cancelled = 0 "
+          'AND (total - paid) > 0.005',
+      orderBy: 'created_at ASC',
+    );
+    if (accountRows.isEmpty) return const [];
+
+    final customerRows = await db.query('customers');
+    final customersById = <String, Customer>{
+      for (final row in customerRows)
+        (row['id'] as String): Customer.fromMap(row),
+    };
+
+    final grouped = <String, List<Account>>{};
+    for (final row in accountRows) {
+      final account = Account.fromMap(row);
+      grouped.putIfAbsent(account.customerId, () => []).add(account);
+    }
+
+    final groups = <CollectionGroup>[];
+    for (final entry in grouped.entries) {
+      final customer = customersById[entry.key];
+      if (customer == null) continue;
+      groups.add(CollectionGroup(customer: customer, accounts: entry.value));
+    }
+
+    groups.sort((a, b) {
+      final aRank = a.isOverdue ? 0 : (a.isDueSoon ? 1 : 2);
+      final bRank = b.isOverdue ? 0 : (b.isDueSoon ? 1 : 2);
+      if (aRank != bRank) return aRank.compareTo(bRank);
+      final aDue = a.dueDate;
+      final bDue = b.dueDate;
+      if (aDue != null && bDue != null && aDue != bDue) {
+        return aDue.compareTo(bDue);
+      }
+      if (aDue != null && bDue == null) return -1;
+      if (aDue == null && bDue != null) return 1;
+      return b.balance.compareTo(a.balance);
+    });
+
+    return groups;
+  }
+
+  /// Cambia (o quita) la fecha de vencimiento de una cuenta.
+  Future<void> updateDueDate(String accountId, DateTime? dueDate) async {
+    final db = await AppDatabase.instance.database;
+    await db.update(
+      'accounts',
+      {'due_date': dueDate?.toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [accountId],
+    );
+  }
+
+  /// Marca que se envió un recordatorio de cobranza.
+  Future<void> markReminder(String accountId) async {
+    final db = await AppDatabase.instance.database;
+    await db.update(
+      'accounts',
+      {'last_reminder_at': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [accountId],
+    );
   }
 
   Future<List<Account>> accountsForCustomer(String customerId) async {

@@ -10,7 +10,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int _version = 4;
+  static const int _version = 5;
 
   Database? _db;
   String? _path;
@@ -122,6 +122,8 @@ class AppDatabase {
         cancelled INTEGER NOT NULL DEFAULT 0,
         cancelled_at TEXT,
         cancel_reason TEXT,
+        refunded REAL NOT NULL DEFAULT 0,
+        refunded_bs REAL NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL
       )
     ''');
@@ -162,6 +164,7 @@ class AppDatabase {
         paid REAL NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'pendiente',
         due_date TEXT,
+        last_reminder_at TEXT,
         cancelled INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
         FOREIGN KEY (customer_id) REFERENCES customers (id)
@@ -194,6 +197,35 @@ class AppDatabase {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE sale_returns (
+        id TEXT PRIMARY KEY,
+        sale_id TEXT NOT NULL,
+        method TEXT NOT NULL,
+        total REAL NOT NULL DEFAULT 0,
+        total_bs REAL NOT NULL DEFAULT 0,
+        rate REAL NOT NULL DEFAULT 0,
+        reason TEXT,
+        cash_session_id TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE sale_return_items (
+        id TEXT PRIMARY KEY,
+        return_id TEXT NOT NULL,
+        sale_item_id TEXT NOT NULL,
+        product_id TEXT,
+        name TEXT NOT NULL,
+        price REAL NOT NULL DEFAULT 0,
+        quantity INTEGER NOT NULL,
+        subtotal REAL NOT NULL DEFAULT 0,
+        FOREIGN KEY (return_id) REFERENCES sale_returns (id) ON DELETE CASCADE
+      )
+    ''');
+
     await db.execute('CREATE INDEX idx_products_active ON products (active)');
     await db.execute('CREATE INDEX idx_sales_created ON sales (created_at)');
     await db.execute(
@@ -205,6 +237,13 @@ class AppDatabase {
     );
     await db.execute(
       'CREATE INDEX idx_cash_sessions_status ON cash_sessions (status)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_sale_returns_sale ON sale_returns (sale_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_sale_return_items_return '
+      'ON sale_return_items (return_id)',
     );
 
     await _seedSettings(db);
@@ -299,6 +338,82 @@ class AppDatabase {
         'INTEGER NOT NULL DEFAULT 0',
       );
     }
+
+    if (oldVersion < 5) {
+      await _addColumn(
+        db,
+        'sales',
+        'refunded',
+        'REAL NOT NULL DEFAULT 0',
+      );
+      await _addColumn(
+        db,
+        'sales',
+        'refunded_bs',
+        'REAL NOT NULL DEFAULT 0',
+      );
+      await _addColumn(db, 'accounts', 'last_reminder_at', 'TEXT');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sale_returns (
+          id TEXT PRIMARY KEY,
+          sale_id TEXT NOT NULL,
+          method TEXT NOT NULL,
+          total REAL NOT NULL DEFAULT 0,
+          total_bs REAL NOT NULL DEFAULT 0,
+          rate REAL NOT NULL DEFAULT 0,
+          reason TEXT,
+          cash_session_id TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (sale_id) REFERENCES sales (id) ON DELETE CASCADE
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sale_return_items (
+          id TEXT PRIMARY KEY,
+          return_id TEXT NOT NULL,
+          sale_item_id TEXT NOT NULL,
+          product_id TEXT,
+          name TEXT NOT NULL,
+          price REAL NOT NULL DEFAULT 0,
+          quantity INTEGER NOT NULL,
+          subtotal REAL NOT NULL DEFAULT 0,
+          FOREIGN KEY (return_id) REFERENCES sale_returns (id) ON DELETE CASCADE
+        )
+      ''');
+
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sale_returns_sale '
+        'ON sale_returns (sale_id)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sale_return_items_return '
+        'ON sale_return_items (return_id)',
+      );
+
+      await _seedNewSettings(db);
+    }
+  }
+
+  Future<void> _seedNewSettings(Database db) async {
+    final defaults = <String, String>{
+      'credit_due_days': '15',
+      'payment_info_enabled': '0',
+      'payment_bank': '',
+      'payment_account': '',
+      'payment_holder': '',
+      'payment_document': '',
+      'payment_mobile_phone': '',
+      'payment_note': '',
+    };
+    for (final entry in defaults.entries) {
+      await db.insert(
+        'settings',
+        {'key': entry.key, 'value': entry.value},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
   }
 
   Future<void> _addColumn(
@@ -330,6 +445,14 @@ class AppDatabase {
       'rate_source': '',
       'last_backup_at': '',
       'onboarded': '0',
+      'credit_due_days': '15',
+      'payment_info_enabled': '0',
+      'payment_bank': '',
+      'payment_account': '',
+      'payment_holder': '',
+      'payment_document': '',
+      'payment_mobile_phone': '',
+      'payment_note': '',
       'created_at': now,
     };
     for (final entry in defaults.entries) {
@@ -381,6 +504,8 @@ class AppDatabase {
     await db.transaction((txn) async {
       await txn.delete('account_payments');
       await txn.delete('accounts');
+      await txn.delete('sale_return_items');
+      await txn.delete('sale_returns');
       await txn.delete('payments');
       await txn.delete('sale_items');
       await txn.delete('sales');

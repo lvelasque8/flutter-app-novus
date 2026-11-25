@@ -79,7 +79,8 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
 
               final total = filtered.fold<double>(
                 0,
-                (sum, sale) => sum + sale.total,
+                (sum, sale) =>
+                    sum + (sale.isCancelled ? 0 : sale.netTotal),
               );
 
               return Column(
@@ -217,6 +218,18 @@ class _SaleTile extends StatelessWidget {
                           variant: AppBadgeVariant.error,
                           size: AppBadgeSize.small,
                         )
+                      else if (sale.isFullyRefunded)
+                        const AppBadge(
+                          'Devuelta',
+                          variant: AppBadgeVariant.error,
+                          size: AppBadgeSize.small,
+                        )
+                      else if (sale.hasReturns)
+                        const AppBadge(
+                          'Con devolución',
+                          variant: AppBadgeVariant.warning,
+                          size: AppBadgeSize.small,
+                        )
                       else if (sale.isCredit)
                         const AppBadge(
                           'Fiado',
@@ -242,14 +255,21 @@ class _SaleTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 AppText(
-                  Money.usd(sale.total),
+                  Money.usd(sale.hasReturns ? sale.netTotal : sale.total),
                   variant: AppTextVariant.titleSmall,
                 ),
-                AppText(
-                  PaymentMethods.label(sale.paymentMethod),
-                  variant: AppTextVariant.caption,
-                  color: AppColors.textSecondary,
-                ),
+                if (sale.hasReturns)
+                  AppText(
+                    'Devuelto -${Money.usd(sale.refunded)}',
+                    variant: AppTextVariant.caption,
+                    color: AppColors.error,
+                  )
+                else
+                  AppText(
+                    PaymentMethods.label(sale.paymentMethod),
+                    variant: AppTextVariant.caption,
+                    color: AppColors.textSecondary,
+                  ),
               ],
             ),
             const SizedBox(width: AppSpacing.sm),

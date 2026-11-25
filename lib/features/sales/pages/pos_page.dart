@@ -19,6 +19,7 @@ import '../../documents/receipt_pdf.dart';
 import '../../products/models/product.dart';
 import '../../products/providers/product_providers.dart';
 import '../../products/widgets/barcode_scanner_page.dart';
+import '../../reports/providers/reports_providers.dart';
 import '../../settings/models/business_settings.dart';
 import '../../settings/providers/settings_providers.dart';
 import '../data/sale_repository.dart';
@@ -143,11 +144,13 @@ class _POSPageState extends ConsumerState<POSPage> {
       ref.invalidate(todayTotalProvider);
       ref.invalidate(todayCountProvider);
       ref.invalidate(accountsProvider);
+      ref.invalidate(collectionProvider);
       ref.invalidate(customersProvider);
       ref.invalidate(receivableTotalProvider);
       ref.invalidate(openAccountsCountProvider);
       ref.invalidate(dashboardProvider);
       ref.invalidate(cashSummaryProvider);
+      ref.invalidate(reportsProvider);
 
       if (!mounted) return;
       await _showSaleDone(sale, settings);

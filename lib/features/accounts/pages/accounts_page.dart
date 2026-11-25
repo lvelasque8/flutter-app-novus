@@ -10,6 +10,9 @@ import '../../../shared/widgets/atoms/app_badge.dart';
 import '../../../shared/widgets/atoms/app_button.dart';
 import '../../../shared/widgets/atoms/app_card.dart';
 import '../../../shared/widgets/atoms/app_text.dart';
+import '../../settings/models/business_settings.dart';
+import '../../settings/providers/settings_providers.dart';
+import '../data/whatsapp_statement.dart';
 import '../models/account.dart';
 import '../providers/account_providers.dart';
 import '../widgets/customer_form_dialog.dart';
@@ -22,12 +25,12 @@ class AccountsPage extends ConsumerStatefulWidget {
 }
 
 class _AccountsPageState extends ConsumerState<AccountsPage> {
-  int _tab = 0;
-
   @override
   Widget build(BuildContext context) {
+    final tab = ref.watch(accountsTabProvider);
     final accounts = ref.watch(accountsProvider);
     final customers = ref.watch(customersProvider);
+    final collection = ref.watch(collectionProvider);
 
     return Column(
       children: [
@@ -52,10 +55,15 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                     icon: Icon(Icons.people_outline),
                     label: Text('Clientes'),
                   ),
+                  ButtonSegment(
+                    value: 2,
+                    icon: Icon(Icons.notifications_active_outlined),
+                    label: Text('Cobranza'),
+                  ),
                 ],
-                selected: {_tab},
+                selected: {tab},
                 onSelectionChanged: (value) =>
-                    setState(() => _tab = value.first),
+                    ref.read(accountsTabProvider.notifier).state = value.first,
               ),
               const Spacer(),
               AppButton(
@@ -72,9 +80,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           ),
         ),
         Expanded(
-          child: _tab == 0
-              ? _buildDebtors(accounts)
-              : _buildCustomers(customers, accounts),
+          child: switch (tab) {
+            1 => _buildCustomers(customers, accounts),
+            2 => _buildCollection(collection),
+            _ => _buildDebtors(accounts),
+          },
         ),
       ],
     );
@@ -89,6 +99,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       data: (items) {
         final total =
             items.fold<double>(0, (sum, item) => sum + item.balance);
+        final overdue = items.where((item) => item.isOverdue).length;
         return Column(
           children: [
             Padding(
@@ -128,6 +139,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                             ],
                           ),
                           const Spacer(),
+                          if (overdue > 0) ...[
+                            AppBadge(
+                              '$overdue ${overdue == 1 ? 'vencida' : 'vencidas'}',
+                              variant: AppBadgeVariant.error,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
                           AppBadge(
                             '${items.length} clientes',
                             variant: AppBadgeVariant.outline,
@@ -185,6 +203,158 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildCollection(AsyncValue<List<CollectionGroup>> collection) {
+    return collection.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text('No se pudo cargar la cobranza: $error'),
+      ),
+      data: (groups) {
+        final total = groups.fold<double>(0, (sum, g) => sum + g.balance);
+        final overdueGroups = groups.where((g) => g.isOverdue).toList();
+        final dueSoonGroups = groups.where((g) => g.isDueSoon).toList();
+        final overdueTotal = overdueGroups.fold<double>(
+          0,
+          (sum, g) => sum + g.balance,
+        );
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: [
+                  _CollectionStat(
+                    label: 'Vencidas',
+                    value: Money.usd(overdueTotal),
+                    detail: TextoPlural.de(
+                      overdueGroups.length,
+                      'cliente vencido',
+                      'clientes vencidos',
+                    ),
+                    color: AppColors.error,
+                  ),
+                  _CollectionStat(
+                    label: 'Por vencer (3 días)',
+                    value: Money.usd(
+                      dueSoonGroups.fold<double>(
+                        0,
+                        (sum, g) => sum + g.balance,
+                      ),
+                    ),
+                    detail: TextoPlural.de(
+                      dueSoonGroups.length,
+                      'cliente por vencer',
+                      'clientes por vencer',
+                    ),
+                    color: AppColors.warning,
+                  ),
+                  _CollectionStat(
+                    label: 'Total en cobranza',
+                    value: Money.usd(total),
+                    detail: TextoPlural.de(
+                      groups.length,
+                      'cliente',
+                      'clientes',
+                    ),
+                    color: AppColors.tertiary,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: groups.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.task_alt,
+                            size: 56,
+                            color: AppColors.success,
+                          ),
+                          SizedBox(height: AppSpacing.md),
+                          AppText(
+                            'No hay nada por cobrar',
+                            variant: AppTextVariant.titleMedium,
+                          ),
+                          SizedBox(height: AppSpacing.xs),
+                          AppText(
+                            'Las cuentas vencidas aparecerán aquí.',
+                            variant: AppTextVariant.bodySmall,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                      ),
+                      itemCount: groups.length,
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final group = groups[index];
+                        return _CollectionRow(
+                          group: group,
+                          onTap: () => context.push(
+                            '/cuenta/${group.customer.id}',
+                          ),
+                          onRemind: () => _remind(group),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _remind(CollectionGroup group) async {
+    if (group.customer.phone.trim().isEmpty) {
+      _showSnack(
+        'Agrega el teléfono de ${group.customer.name} para recordarle',
+      );
+      return;
+    }
+
+    final settings =
+        ref.read(settingsProvider).valueOrNull ?? BusinessSettings.initial();
+    final message = WhatsAppStatement.buildReminder(
+      settings: settings,
+      customer: group.customer,
+      accounts: group.accounts,
+    );
+    final opened = await WhatsAppStatement.open(
+      phone: group.customer.phone,
+      message: message,
+    );
+
+    if (!opened) {
+      _showSnack('No se pudo abrir WhatsApp. Verifica que esté instalado.');
+      return;
+    }
+
+    final repository = ref.read(accountRepositoryProvider);
+    for (final account in group.accounts) {
+      await repository.markReminder(account.id);
+    }
+    ref.invalidate(collectionProvider);
+    ref.invalidate(customerAccountsProvider(group.customer.id));
+    _showSnack('Recordatorio preparado para ${group.customer.name}');
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
@@ -281,6 +451,169 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   }
 }
 
+class _CollectionStat extends StatelessWidget {
+  const _CollectionStat({
+    required this.label,
+    required this.value,
+    required this.detail,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final String detail;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 240,
+      child: AppCard(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppText(
+              label,
+              variant: AppTextVariant.caption,
+              color: AppColors.textSecondary,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            AppText(
+              value,
+              variant: AppTextVariant.titleLarge,
+              color: color,
+            ),
+            const SizedBox(height: 2),
+            AppText(
+              detail,
+              variant: AppTextVariant.caption,
+              color: AppColors.textHint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectionRow extends StatelessWidget {
+  const _CollectionRow({
+    required this.group,
+    required this.onTap,
+    required this.onRemind,
+  });
+
+  final CollectionGroup group;
+  final VoidCallback onTap;
+  final VoidCallback onRemind;
+
+  @override
+  Widget build(BuildContext context) {
+    final due = group.dueDate;
+    final now = DateTime.now();
+    String status;
+    Color statusColor;
+    if (group.isOverdue) {
+      status = 'Vencida hace '
+          '${group.overdueDays} ${group.overdueDays == 1 ? 'día' : 'días'}';
+      statusColor = AppColors.error;
+    } else if (due == null) {
+      status = 'Sin vencimiento';
+      statusColor = AppColors.textSecondary;
+    } else {
+      final days = DateTime(due.year, due.month, due.day)
+          .difference(DateTime(now.year, now.month, now.day))
+          .inDays;
+      if (days == 0) {
+        status = 'Vence hoy';
+        statusColor = AppColors.warning;
+      } else {
+        status = 'Vence en $days ${days == 1 ? 'día' : 'días'} '
+            '(${Money.date(due)})';
+        statusColor = AppColors.textSecondary;
+      }
+    }
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: group.isOverdue
+                  ? AppColors.errorContainer
+                  : AppColors.tertiaryContainer,
+              child: Text(
+                group.customer.name.isEmpty
+                    ? '?'
+                    : group.customer.name[0].toUpperCase(),
+                style: TextStyle(
+                  color: group.isOverdue
+                      ? AppColors.onErrorContainer
+                      : AppColors.onTertiaryContainer,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    group.customer.name,
+                    variant: AppTextVariant.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  AppText(
+                    status,
+                    variant: AppTextVariant.caption,
+                    color: statusColor,
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                AppText(
+                  Money.usd(group.balance),
+                  variant: AppTextVariant.titleSmall,
+                  color: AppColors.error,
+                ),
+                AppText(
+                  TextoPlural.de(
+                    group.openAccounts,
+                    'cuenta',
+                    'cuentas',
+                  ),
+                  variant: AppTextVariant.caption,
+                  color: AppColors.textHint,
+                ),
+              ],
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            IconButton(
+              tooltip: 'Recordar por WhatsApp',
+              onPressed: onRemind,
+              icon: const Icon(
+                Icons.chat_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textHint),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CustomerDebtRow extends StatelessWidget {
   const _CustomerDebtRow({required this.summary, required this.onTap});
 
@@ -315,9 +648,23 @@ class _CustomerDebtRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText(
-                    summary.customer.name,
-                    variant: AppTextVariant.titleSmall,
+                  Row(
+                    children: [
+                      Flexible(
+                        child: AppText(
+                          summary.customer.name,
+                          variant: AppTextVariant.titleSmall,
+                        ),
+                      ),
+                      if (summary.isOverdue) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        AppBadge(
+                          'Vencida ${summary.overdueDays}d',
+                          variant: AppBadgeVariant.error,
+                          size: AppBadgeSize.small,
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 2),
                   AppText(

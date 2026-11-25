@@ -317,12 +317,14 @@ class _CashPageState extends ConsumerState<CashPage> {
                 _MoneyCard(
                   label: 'Efectivo esperado Bs',
                   value: Money.bs(summary.expectedBs),
-                  detail: 'Fondo ${Money.bs(session.openingBs)} + ventas',
+                  detail: 'Fondo ${Money.bs(session.openingBs)} + ventas '
+                      '− devoluciones',
                 ),
                 _MoneyCard(
                   label: 'Efectivo esperado USD',
                   value: Money.usd(summary.expectedUsd),
-                  detail: 'Fondo ${Money.usd(session.openingUsd)} + ventas',
+                  detail: 'Fondo ${Money.usd(session.openingUsd)} + ventas '
+                      '− devoluciones',
                 ),
               ],
             ),
@@ -346,6 +348,14 @@ class _CashPageState extends ConsumerState<CashPage> {
                   count: 0,
                 ),
               ),
+            if (summary.returnsTotalUsd > 0.005) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _MethodRow(
+                method: 'Devoluciones del turno',
+                amount: -summary.returnsTotalUsd,
+                count: 0,
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             SizedBox(
               width: double.infinity,

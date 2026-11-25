@@ -17,6 +17,10 @@ preparada para agregar sincronización en una fase posterior.
 - **Ventas**: catálogo táctil, carrito, descuentos, IVA configurable y cobro en
   efectivo (Bs/USD), Pago Móvil, transferencia, punto de venta o fiado.
   Incluye **anulación de ventas** con devolución de stock.
+- **Devoluciones parciales**: desde el detalle de la venta se elige cuántas
+  unidades devolver de cada producto. Repone el stock, registra el movimiento,
+  ajusta caja y reportes y, si la venta fue fiada, abona el monto a la cuenta
+  del cliente.
 - **Pagos combinados**: reparte el total entre varios métodos y deja el resto
   como fiado. Ejemplo: $1,00 en efectivo + $2,48 por Pago Móvil, o efectivo +
   fiado parcial.
@@ -25,8 +29,15 @@ preparada para agregar sincronización en una fase posterior.
 - **Cuentas por cobrar**: fiados por cliente, saldo, historial de abonos y
   registro de pagos parciales. Incluye **Saldar cuenta** para cobrar el saldo
   completo sin escribir el monto, **límite de crédito** por cliente,
-  **edición de los datos del cliente** y **envío del estado de cuenta por
-  WhatsApp**.
+  **edición de los datos del cliente**, **vencimiento de fiados** y
+  **cobranza automática** con recordatorios por WhatsApp.
+- **Cobranza**: cada fiado nuevo vence según el plazo configurado (15 días por
+  defecto). La pestaña **Cobranza** agrupa las cuentas vencidas y por vencer,
+  muestra el monto y permite enviar un recordatorio por WhatsApp con un toque.
+  El inicio avisa cuando hay cuentas vencidas.
+- **Datos de pago en WhatsApp**: banco, cuenta, titular, cédula/RIF, Pago Móvil
+  y una nota opcional. Se activan o desactivan con un interruptor en Ajustes y
+  se agregan al estado de cuenta o al recordatorio.
 - **Notas de entrega / recibos no fiscales**: PDF imprimible o compartible con
   correlativo, datos del negocio, ítems, totales y leyenda **“Documento no
   fiscal”**.
@@ -42,8 +53,8 @@ preparada para agregar sincronización en una fase posterior.
 - **Tasa BCV automática**: consulta la tasa oficial del día al abrir la app,
   con la API como respaldo y opción manual para ajustarla.
 - **Inicio**: ventas del día, cuentas por cobrar, stock bajo y últimas ventas.
-- **Ajustes**: datos del negocio, RIF, teléfono, dirección, tasa BCV, IVA e
-  impresora térmica.
+- **Ajustes**: datos del negocio, RIF, teléfono, dirección, tasa BCV, IVA,
+  días de plazo para fiados, datos de pago para WhatsApp e impresora térmica.
 
 ## Cómo funciona el almacenamiento
 
@@ -114,8 +125,8 @@ lib/
 ## Base de datos
 
 Tablas principales: `products`, `inventory_movements`, `sales`, `sale_items`,
-`payments`, `customers`, `accounts`, `account_payments`, `cash_sessions` y
-`settings`.
+`payments`, `sale_returns`, `sale_return_items`, `customers`, `accounts`,
+`account_payments`, `cash_sessions` y `settings`.
 
 El stock se calcula/actualiza con movimientos (`entrada`, `venta`, `ajuste`),
 lo que deja trazabilidad y prepara el terreno para sincronización. Las ventas y
@@ -124,7 +135,6 @@ abonos guardan la sesión de caja a la que pertenecen.
 ## Próximos pasos
 
 - Sincronización opcional (una caja hoy, varias después).
-- Anulación y devoluciones de ventas.
 - Entradas y ajustes de inventario con historial.
 - PIN/usuarios y roles.
 - Facturación fiscal (SENIAT), fuera del alcance actual.
