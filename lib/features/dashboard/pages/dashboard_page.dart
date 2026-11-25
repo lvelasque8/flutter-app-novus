@@ -117,7 +117,9 @@ class DashboardPage extends ConsumerWidget {
                         title: 'Cuentas por cobrar',
                         value: Money.usd(data.receivable),
                         subtitle: data.overdueCount > 0
-                            ? '${data.overdueCount} vencidas'
+                            ? data.overdueCount == 1
+                                ? '1 vencida'
+                                : '${data.overdueCount} vencidas'
                             : TextoPlural.de(
                                 data.openAccounts,
                                 'cuenta abierta',
@@ -487,6 +489,8 @@ class _SaleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCredit = sale.status == 'pendiente';
+    final hasReturns = sale.hasReturns as bool;
+    final isFullyRefunded = sale.isFullyRefunded as bool;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
@@ -530,7 +534,7 @@ class _SaleRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (isCredit) ...[
+            if (isCredit && !hasReturns) ...[
               const AppBadge(
                 'Fiado',
                 variant: AppBadgeVariant.warning,
@@ -538,8 +542,16 @@ class _SaleRow extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.sm),
             ],
+            if (hasReturns) ...[
+              AppBadge(
+                isFullyRefunded ? 'Devuelta' : 'Devolución',
+                variant: AppBadgeVariant.error,
+                size: AppBadgeSize.small,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+            ],
             AppText(
-              Money.usd(sale.total as double),
+              Money.usd(sale.netTotal as double),
               variant: AppTextVariant.titleSmall,
             ),
             const SizedBox(width: AppSpacing.sm),

@@ -113,19 +113,21 @@ Future<void> printSaleReceipt({
         if (sale.discount > 0)
           _row('Descuento', '-${_usd(sale.discount)}'),
         _row('IVA (${settings.ivaRate.toStringAsFixed(0)}%)', _usd(sale.tax)),
+        if (sale.hasReturns)
+          _row('Devuelto', '-${_usd(sale.refunded)}'),
         pw.Divider(),
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'TOTAL USD',
+              sale.hasReturns ? 'TOTAL NETO USD' : 'TOTAL USD',
               style: pw.TextStyle(
                 fontSize: 10,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
             pw.Text(
-              _usd(sale.total),
+              _usd(sale.hasReturns ? sale.netTotal : sale.total),
               style: pw.TextStyle(
                 fontSize: 10,
                 fontWeight: pw.FontWeight.bold,
@@ -136,7 +138,10 @@ Future<void> printSaleReceipt({
         if (rate > 0) ...[
           pw.SizedBox(height: 2),
           _row('Tasa BCV', 'Bs ${_number(rate)} / USD'),
-          _row('TOTAL Bs', 'Bs ${_number(totalBs)}'),
+          _row(
+            sale.hasReturns ? 'TOTAL NETO Bs' : 'TOTAL Bs',
+            'Bs ${_number(sale.hasReturns ? sale.netTotalBs : totalBs)}',
+          ),
         ],
         pw.SizedBox(height: 6),
         _row('Forma de pago', paymentLabel(sale.paymentMethod)),

@@ -224,22 +224,31 @@ class ThermalPrinterService {
         _usd(sale.tax),
       );
     }
+    if (sale.hasReturns) {
+      bytes += _row(generator, 'Devuelto', '-${_usd(sale.refunded)}');
+    }
     bytes += generator.hr();
     bytes += generator.row([
       PosColumn(
-        text: 'TOTAL USD',
+        text: sale.hasReturns ? 'TOTAL NETO USD' : 'TOTAL USD',
         width: 7,
         styles: const PosStyles(bold: true),
       ),
       PosColumn(
-        text: _usd(sale.total),
+        text: _usd(sale.hasReturns ? sale.netTotal : sale.total),
         width: 5,
         styles: const PosStyles(bold: true, align: PosAlign.right),
       ),
     ]);
     if (rate > 0) {
       bytes += _row(generator, 'Tasa BCV', '${_number(rate)} Bs/USD');
-      bytes += _row(generator, 'TOTAL Bs', '${_number(totalBs)} Bs');
+      bytes += _row(
+        generator,
+        sale.hasReturns ? 'TOTAL NETO Bs' : 'TOTAL Bs',
+        sale.hasReturns
+            ? '${_number(sale.netTotalBs)} Bs'
+            : '${_number(totalBs)} Bs',
+      );
     }
 
     bytes += generator.emptyLines(1);

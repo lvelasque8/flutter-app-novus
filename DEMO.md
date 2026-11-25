@@ -30,6 +30,14 @@
 |---|---|
 | ![Saldar](docs/screenshots/13-saldar-cuenta.png) | ![Pagada](docs/screenshots/14-cuenta-pagada.png) |
 
+| Cobranza | Devolver productos |
+|---|---|
+| ![Cobranza](docs/screenshots/15-cobranza.png) | ![Devolución](docs/screenshots/16-devolucion.png) |
+
+| Fiado vencido |
+|---|
+| ![Vencimiento](docs/screenshots/17-vencimiento.png) |
+
 ## Instalar en la tablet
 
 1. Copia `dist/Novus-1.0.0-tablet.apk` a la tablet (cable USB, Google Drive o
