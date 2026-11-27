@@ -17,6 +17,7 @@ import '../../documents/receipt_pdf.dart';
 import '../../products/providers/product_providers.dart';
 import '../../reports/providers/reports_providers.dart';
 import '../../settings/providers/settings_providers.dart';
+import '../../sync/providers/remote_sync_providers.dart';
 import '../data/sale_repository.dart';
 import '../models/sale.dart';
 import '../providers/sale_providers.dart';
@@ -535,6 +536,7 @@ Future<void> _confirmCancelSale(
     ref.invalidate(openAccountsCountProvider);
     ref.invalidate(activeProductsProvider);
     ref.invalidate(productsProvider);
+    ref.read(remoteSyncControllerProvider.notifier).requestSync();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Venta ${sale.number} anulada')),
@@ -589,6 +591,7 @@ Future<void> _showReturnDialog(
     if (sale.customerId != null) {
       ref.invalidate(customerAccountsProvider(sale.customerId!));
     }
+    ref.read(remoteSyncControllerProvider.notifier).requestSync();
 
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

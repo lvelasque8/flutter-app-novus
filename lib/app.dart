@@ -4,12 +4,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/navigation/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/sync/providers/remote_sync_providers.dart';
 
-class NovusApp extends ConsumerWidget {
+class NovusApp extends ConsumerStatefulWidget {
   const NovusApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NovusApp> createState() => _NovusAppState();
+}
+
+class _NovusAppState extends ConsumerState<NovusApp>
+    with WidgetsBindingObserver {
+  late final RemoteSyncController _sync;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _sync = ref.read(remoteSyncControllerProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _sync.start());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _sync.stop();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _sync.requestSync();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(

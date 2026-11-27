@@ -107,6 +107,9 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 17. **Ajustes → Impresora térmica**: empareja la impresora desde Bluetooth de
     Android, elígela, selecciona 58/80 mm y usa **Imprimir prueba**. Luego, al
     cobrar, aparece **Imprimir ticket**.
+18. **Ajustes → Panel remoto**: conecta la tablet con la cuenta del dueño y
+    consulta ventas, cuentas, inventario y caja desde el teléfono o la
+    computadora. Es de solo lectura: para vender o editar se usa la tablet.
 
 ## Qué funciona
 
@@ -129,6 +132,8 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 - Tasa BCV automática (BCV oficial, con API de respaldo).
 - Nota de entrega/recibo en PDF para imprimir o compartir.
 - Inicio con ventas del día, cuentas pendientes y stock bajo.
+- Panel remoto de solo consulta (ventas, cuentas, inventario y caja) con
+  sincronización de cambios a Supabase.
 - Los datos quedan guardados en la tablet; la tasa se actualiza cuando hay conexión.
 
 ## Limitaciones de esta versión
@@ -136,6 +141,7 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 - Está pensada para **una sola caja/tablet**.
 - No emite facturación fiscal (SENIAT); solo documentos no fiscales.
 - La app no tiene bloqueo por PIN ni usuarios/roles.
+- El panel remoto es de **solo consulta**; para vender o editar se usa la tablet.
 - La sincronización entre varias cajas queda para una fase posterior.
 - Las devoluciones son por producto; no se puede anular una venta que ya tiene
   devoluciones registradas.

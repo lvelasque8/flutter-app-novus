@@ -69,6 +69,7 @@ dependencies:
 
   # Enviar estado de cuenta por WhatsApp
   url_launcher: ^6.3.2
+  supabase_flutter: ^2.18.3
 
 # path_provider_android 2.3.x compila código nativo JNI que no necesitamos.
 # Esta versión usa canales de plataforma y mantiene el build simple.

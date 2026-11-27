@@ -22,6 +22,7 @@ import '../../rates/data/exchange_rate_service.dart';
 import '../../rates/providers/rate_providers.dart';
 import '../../reports/providers/reports_providers.dart';
 import '../../sales/providers/sale_providers.dart';
+import '../../sync/widgets/remote_sync_card.dart';
 import '../data/settings_repository.dart';
 import '../models/business_settings.dart';
 import '../providers/settings_providers.dart';
@@ -542,6 +543,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     PrinterSettingsCard(settings: value),
+                    const SizedBox(height: AppSpacing.lg),
+                    const RemoteSyncCard(),
                     const SizedBox(height: AppSpacing.lg),
                     AppCard(
                       padding: const EdgeInsets.all(AppSpacing.xl),

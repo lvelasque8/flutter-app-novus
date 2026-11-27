@@ -10,7 +10,7 @@ class AppDatabase {
   AppDatabase._();
 
   static final AppDatabase instance = AppDatabase._();
-  static const int _version = 5;
+  static const int _version = 6;
 
   Database? _db;
   String? _path;
@@ -247,6 +247,7 @@ class AppDatabase {
     );
 
     await _seedSettings(db);
+    await _installSyncQueue(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -393,6 +394,83 @@ class AppDatabase {
       );
 
       await _seedNewSettings(db);
+    }
+
+    if (oldVersion < 6) {
+      await _installSyncQueue(db, seedExisting: true);
+    }
+  }
+
+  /// Tablas que se replican en la nube para el panel de solo lectura.
+  static const List<String> _syncTables = [
+    'products',
+    'customers',
+    'cash_sessions',
+    'sales',
+    'sale_items',
+    'payments',
+    'inventory_movements',
+    'accounts',
+    'account_payments',
+    'sale_returns',
+    'sale_return_items',
+  ];
+
+  /// Crea la cola de cambios y los triggers que la alimentan.
+  ///
+  /// La aplicación nunca escribe en la cola a mano: los triggers registran
+  /// altas, cambios y bajas de cada tabla sincronizable.
+  Future<void> _installSyncQueue(
+    Database db, {
+    bool seedExisting = false,
+  }) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_queue (
+        entity TEXT NOT NULL,
+        row_id TEXT NOT NULL,
+        op TEXT NOT NULL DEFAULT 'upsert',
+        changed_at TEXT NOT NULL,
+        PRIMARY KEY (entity, row_id)
+      )
+    ''');
+
+    for (final table in _syncTables) {
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_${table}_sync_insert
+        AFTER INSERT ON $table
+        BEGIN
+          INSERT OR REPLACE INTO sync_queue (entity, row_id, op, changed_at)
+          VALUES ('$table', NEW.id, 'upsert',
+                  strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+        END
+      ''');
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_${table}_sync_update
+        AFTER UPDATE ON $table
+        BEGIN
+          INSERT OR REPLACE INTO sync_queue (entity, row_id, op, changed_at)
+          VALUES ('$table', NEW.id, 'upsert',
+                  strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+        END
+      ''');
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS trg_${table}_sync_delete
+        AFTER DELETE ON $table
+        BEGIN
+          INSERT OR REPLACE INTO sync_queue (entity, row_id, op, changed_at)
+          VALUES ('$table', OLD.id, 'delete',
+                  strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+        END
+      ''');
+
+      if (seedExisting) {
+        await db.execute('''
+          INSERT OR IGNORE INTO sync_queue (entity, row_id, op, changed_at)
+          SELECT '$table', id, 'upsert',
+                 strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+          FROM $table
+        ''');
+      }
     }
   }
 

@@ -96,12 +96,24 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Reportes y caja restan las devoluciones; el historial marca la venta.
 - No se puede anular una venta con devoluciones registradas.
 
+### Panel remoto de solo consulta — ✅
+
+- La tablet sube solo los cambios a Supabase (`sync_queue` con triggers).
+- Sincroniza al abrir, cada 10 minutos, al volver a la app, tras una venta o
+  abono y con el botón **Sincronizar ahora**.
+- Panel web con Inicio, Ventas, Cuentas, Inventario y Caja.
+- Login con la cuenta del dueño y permisos por fila (RLS).
+- La tablet sigue siendo la única que vende y edita.
+
 ## Pendiente
 
+- Edición remota de catálogo y precios (siguiente fase del panel).
+- Sincronización en tiempo real entre varias cajas.
+- Usuarios y roles en el panel.
 - Entradas y ajustes de inventario con historial.
 - Gastos del negocio y compras a proveedores.
 - Notificaciones de cobranza en segundo plano.
 - Respaldo automático.
-- PIN/usuarios y roles.
+- PIN/usuarios y roles en la tablet.
 - Impresión por USB/red (hoy solo Bluetooth).
 - Importar/exportar inventario en CSV.

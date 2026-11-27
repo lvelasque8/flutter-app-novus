@@ -22,6 +22,7 @@ import '../../products/widgets/barcode_scanner_page.dart';
 import '../../reports/providers/reports_providers.dart';
 import '../../settings/models/business_settings.dart';
 import '../../settings/providers/settings_providers.dart';
+import '../../sync/providers/remote_sync_providers.dart';
 import '../data/sale_repository.dart';
 import '../models/sale.dart';
 import '../providers/cart_provider.dart';
@@ -151,6 +152,7 @@ class _POSPageState extends ConsumerState<POSPage> {
       ref.invalidate(dashboardProvider);
       ref.invalidate(cashSummaryProvider);
       ref.invalidate(reportsProvider);
+      ref.read(remoteSyncControllerProvider.notifier).requestSync();
 
       if (!mounted) return;
       await _showSaleDone(sale, settings);

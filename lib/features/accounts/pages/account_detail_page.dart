@@ -15,6 +15,7 @@ import '../../sales/models/sale.dart';
 import '../../sales/providers/sale_providers.dart';
 import '../../settings/models/business_settings.dart';
 import '../../settings/providers/settings_providers.dart';
+import '../../sync/providers/remote_sync_providers.dart';
 import '../data/whatsapp_statement.dart';
 import '../models/account.dart';
 import '../providers/account_providers.dart';
@@ -517,6 +518,7 @@ class _AccountCard extends ConsumerWidget {
     ref.invalidate(accountsProvider);
     ref.invalidate(collectionProvider);
     ref.invalidate(dashboardProvider);
+    ref.read(remoteSyncControllerProvider.notifier).requestSync();
   }
 
   Future<void> _showAbono(
@@ -551,6 +553,7 @@ class _AccountCard extends ConsumerWidget {
       ref.invalidate(todayTotalProvider);
       ref.invalidate(todayCountProvider);
       ref.invalidate(cashSummaryProvider);
+      ref.read(remoteSyncControllerProvider.notifier).requestSync();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Abono registrado')),
