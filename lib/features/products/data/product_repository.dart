@@ -4,6 +4,23 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
 import '../models/product.dart';
 import 'default_categories.dart';
+import 'inventory_import.dart';
+
+class InventoryImportResult {
+  const InventoryImportResult({
+    required this.created,
+    required this.updated,
+    required this.unchanged,
+    required this.skipped,
+    required this.adjustments,
+  });
+
+  final int created;
+  final int updated;
+  final int unchanged;
+  final int skipped;
+  final int adjustments;
+}
 
 class ProductRepository {
   static const _uuid = Uuid();
@@ -281,7 +298,17 @@ class ProductRepository {
     String reference,
   ) async {
     final db = await AppDatabase.instance.database;
-    await db.insert('inventory_movements', {
+    await _insertMovementTxn(db, productId, type, quantity, reference);
+  }
+
+  Future<void> _insertMovementTxn(
+    DatabaseExecutor txn,
+    String productId,
+    String type,
+    int quantity,
+    String reference,
+  ) async {
+    await txn.insert('inventory_movements', {
       'id': _uuid.v4(),
       'product_id': productId,
       'type': type,
@@ -289,5 +316,177 @@ class ProductRepository {
       'reference': reference,
       'created_at': DateTime.now().toIso8601String(),
     });
+  }
+
+  /// Aplica las filas válidas de un Excel.
+  ///
+  /// Los productos existentes se buscan por código de barras, SKU o nombre.
+  /// El stock se fija al valor indicado y se registra el ajuste para mantener
+  /// la trazabilidad.
+  Future<InventoryImportResult> importRows(
+    List<InventoryImportRow> rows, {
+    bool updateExisting = true,
+  }) async {
+    final db = await AppDatabase.instance.database;
+    final stamp = DateTime.now().toIso8601String();
+    var created = 0;
+    var updated = 0;
+    var unchanged = 0;
+    var skipped = 0;
+    var adjustments = 0;
+
+    await db.transaction((txn) async {
+      final existingRows = await txn.query('products');
+      final byBarcode = <String, Map<String, Object?>>{};
+      final bySku = <String, Map<String, Object?>>{};
+      final byName = <String, Map<String, Object?>>{};
+      final usedSkus = <String>{};
+
+      for (final row in existingRows) {
+        final barcode = ((row['barcode'] as String?) ?? '').toLowerCase();
+        final sku = ((row['sku'] as String?) ?? '').toLowerCase();
+        final name = ((row['name'] as String?) ?? '').toLowerCase();
+        if (barcode.isNotEmpty) byBarcode[barcode] = row;
+        if (sku.isNotEmpty) bySku[sku] = row;
+        if (name.isNotEmpty) byName[name] = row;
+        final rawSku = ((row['sku'] as String?) ?? '').trim();
+        if (rawSku.isNotEmpty) usedSkus.add(rawSku.toUpperCase());
+      }
+
+      Map<String, Object?>? matchFor(InventoryImportRow row) {
+        final barcode = (row.barcode ?? '').toLowerCase();
+        if (barcode.isNotEmpty) {
+          final match = byBarcode[barcode];
+          if (match != null) return match;
+        }
+        final sku = (row.sku ?? '').toLowerCase();
+        if (sku.isNotEmpty) {
+          final match = bySku[sku];
+          if (match != null) return match;
+        }
+        final name = (row.name ?? '').toLowerCase();
+        if (name.isNotEmpty) return byName[name];
+        return null;
+      }
+
+      for (final row in rows.where((row) => row.isValid)) {
+        final match = matchFor(row);
+
+        if (match == null) {
+          final name = (row.name ?? '').trim();
+          if (name.isEmpty) {
+            skipped++;
+            continue;
+          }
+
+          final id = _uuid.v4();
+          final sku = (row.sku ?? '').trim().isEmpty
+              ? _nextSku(row.category ?? '', usedSkus)
+              : row.sku!.trim();
+          final stock = row.stock ?? 0;
+          final createdRow = <String, Object?>{
+            'id': id,
+            'name': name,
+            'sku': sku,
+            'barcode': (row.barcode ?? '').trim(),
+            'category': (row.category ?? '').trim(),
+            'price': row.price ?? 0,
+            'cost': row.cost ?? 0,
+            'stock': stock,
+            'min_stock': row.minStock ?? 0,
+            'tax_exempt': (row.taxExempt ?? false) ? 1 : 0,
+            'active': 1,
+            'created_at': stamp,
+            'updated_at': stamp,
+          };
+          await txn.insert('products', createdRow);
+
+          if (stock != 0) {
+            await _insertMovementTxn(
+              txn,
+              id,
+              'entrada',
+              stock,
+              'Importación Excel',
+            );
+          }
+
+          final barcode = (createdRow['barcode'] as String).toLowerCase();
+          if (barcode.isNotEmpty) byBarcode[barcode] = createdRow;
+          if (sku.isNotEmpty) bySku[sku.toLowerCase()] = createdRow;
+          byName[name.toLowerCase()] = createdRow;
+          created++;
+          continue;
+        }
+
+        if (!updateExisting) {
+          skipped++;
+          continue;
+        }
+
+        final id = match['id'] as String;
+        final currentStock = ((match['stock'] as num?) ?? 0).toInt();
+        final newStock = row.stock ?? currentStock;
+        final delta = newStock - currentStock;
+
+        final updates = <String, Object?>{
+          'updated_at': stamp,
+          'stock': newStock,
+        };
+        if (row.name != null) updates['name'] = row.name;
+        if (row.category != null) updates['category'] = row.category;
+        if (row.barcode != null) updates['barcode'] = row.barcode;
+        if (row.sku != null) updates['sku'] = row.sku;
+        if (row.price != null) updates['price'] = row.price;
+        if (row.cost != null) updates['cost'] = row.cost;
+        if (row.minStock != null) updates['min_stock'] = row.minStock;
+        if (row.taxExempt != null) {
+          updates['tax_exempt'] = row.taxExempt! ? 1 : 0;
+        }
+
+        await txn.update(
+          'products',
+          updates,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        match.addAll(updates);
+
+        if (delta != 0) {
+          await _insertMovementTxn(
+            txn,
+            id,
+            'ajuste',
+            delta,
+            'Importación Excel',
+          );
+          adjustments++;
+        } else {
+          unchanged++;
+        }
+        updated++;
+      }
+    });
+
+    return InventoryImportResult(
+      created: created,
+      updated: updated,
+      unchanged: unchanged,
+      skipped: skipped,
+      adjustments: adjustments,
+    );
+  }
+
+  String _nextSku(String category, Set<String> used) {
+    final prefix = _categoryPrefix(category);
+    var number = 1;
+    while (true) {
+      final sku = '$prefix-${number.toString().padLeft(4, '0')}';
+      if (!used.contains(sku.toUpperCase())) {
+        used.add(sku.toUpperCase());
+        return sku;
+      }
+      number++;
+    }
   }
 }

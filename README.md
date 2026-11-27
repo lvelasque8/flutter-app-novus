@@ -50,6 +50,9 @@ preparada para agregar sincronización en una fase posterior.
   productos más vendidos y ventas por día.
 - **Respaldo y restauración**: exporta la base por el menú de compartir y
   restaura un archivo `.db` desde Ajustes.
+- **Importar inventario desde Excel**: descarga la plantilla, revisa una vista
+  previa y crea o actualiza productos por código de barras, SKU o nombre. El
+  stock se ajusta con su movimiento registrado.
 - **Panel remoto (solo consulta)**: sube los cambios a tu proyecto de Supabase
   y permite ver ventas, cuentas, inventario y caja desde el teléfono o la
   computadora. La tablet sigue siendo la única que vende y edita.

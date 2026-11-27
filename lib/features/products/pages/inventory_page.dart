@@ -15,6 +15,7 @@ import '../../../shared/widgets/atoms/app_text.dart';
 import '../../dashboard/providers/dashboard_providers.dart';
 import '../models/product.dart';
 import '../providers/product_providers.dart';
+import 'inventory_import_page.dart';
 
 class InventoryPage extends ConsumerWidget {
   const InventoryPage({super.key});
@@ -45,6 +46,13 @@ class InventoryPage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
+              AppButton(
+                'Importar Excel',
+                variant: AppButtonVariant.secondary,
+                icon: Icons.upload_file_outlined,
+                onPressed: () => _openImport(context),
+              ),
+              const SizedBox(width: AppSpacing.sm),
               AppButton(
                 'Agregar producto',
                 icon: Icons.add,
@@ -154,6 +162,14 @@ class InventoryPage extends ConsumerWidget {
       ],
     );
   }
+}
+
+Future<void> _openImport(BuildContext context) {
+  return Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (context) => const InventoryImportPage(),
+    ),
+  );
 }
 
 class _ProductRow extends StatelessWidget {
@@ -326,6 +342,12 @@ class _EmptyInventory extends StatelessWidget {
                       'Agregar producto',
                       icon: Icons.add,
                       onPressed: () => context.push(AppRoutes.productNew),
+                    ),
+                    AppButton(
+                      'Importar Excel',
+                      variant: AppButtonVariant.secondary,
+                      icon: Icons.upload_file_outlined,
+                      onPressed: () => _openImport(context),
                     ),
                     if (onSeed != null)
                       AppButton(

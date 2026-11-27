@@ -110,10 +110,16 @@ adb install -r dist/Novus-1.0.0-tablet.apk
 18. **Ajustes → Panel remoto**: conecta la tablet con la cuenta del dueño y
     consulta ventas, cuentas, inventario y caja desde el teléfono o la
     computadora. Es de solo lectura: para vender o editar se usa la tablet.
+19. **Inventario → Importar Excel**: descarga la plantilla, elige el archivo y
+    revisa la vista previa. Los productos existentes se actualizan por código
+    de barras, SKU o nombre; los nuevos se crean. El stock queda con su
+    movimiento de ajuste.
 
 ## Qué funciona
 
 - Inventario con stock, stock mínimo, búsqueda y edición.
+- Importación de inventario desde Excel con plantilla, vista previa y ajuste de
+  stock trazable.
 - Carga rápida de productos: categorías sugeridas, SKU automático, aviso de
   código de barras/SKU duplicado y **Guardar y agregar otro**.
 - Lector de código de barras con la cámara desde el POS y desde el producto.

@@ -105,6 +105,15 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Login con la cuenta del dueño y permisos por fila (RLS).
 - La tablet sigue siendo la única que vende y edita.
 
+### Importar inventario desde Excel — ✅
+
+- Plantilla `.xlsx` descargable con encabezados y ejemplos.
+- Vista previa con filas listas y errores (nombre, precio, stock, duplicados).
+- Crea productos nuevos y actualiza existentes por código de barras, SKU o
+  nombre.
+- El stock se ajusta con un movimiento `ajuste` (trazabilidad).
+- Los datos se replican al panel en la siguiente sincronización.
+
 ## Pendiente
 
 - Edición remota de catálogo y precios (siguiente fase del panel).
@@ -116,4 +125,4 @@ Se aplicó en Reportes, Inicio (Ventas de hoy / Cuentas por cobrar), Ventas
 - Respaldo automático.
 - PIN/usuarios y roles en la tablet.
 - Impresión por USB/red (hoy solo Bluetooth).
-- Importar/exportar inventario en CSV.
+- Exportar inventario a Excel/CSV (la importación ya está).
